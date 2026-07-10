@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Remo - Comparador de viajes</title>
+
+  <style>
+    :root {
+      --bg: #eef4f6;
+      --panel: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #111827;
+      --border: #dbe3ea;
+      --shadow: 0 18px 40px rgba(15, 23, 42, 0.10);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    html { scroll-behavior: smooth; }
+    body { min-height: 100vh; background: radial-gradient(circle at top left, rgba(14, 165, 233, 0.18), transparent 30%), linear-gradient(180deg, #edf7f7 0%, #f8fafc 100%); color: var(--text); padding: 18px 12px 38px; }
+    .app { width: 100%; max-width: 1080px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 18px; }
+    .logo { width: 54px; height: 54px; border-radius: 18px; background: #111827; color: white; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; box-shadow: var(--shadow); margin-bottom: 12px; }
+    h1 { font-size: clamp(34px, 7vw, 54px); letter-spacing: -1.5px; margin-bottom: 4px; }
+    .subtitle { color: var(--muted); font-size: 15px; }
+    .search-box, .summary, .dev-box { background: rgba(255,255,255,0.94); border: 1px solid var(--border); backdrop-filter: blur(14px); border-radius: 28px; padding: 16px; box-shadow: var(--shadow); margin-bottom: 14px; }
+    .fields { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
+    .field { position: relative; }
+    .field label { display: block; font-size: 13px; font-weight: 800; margin-bottom: 8px; color: #334155; }
+    input { width: 100%; border: 1px solid var(--border); background: white; color: var(--text); border-radius: 16px; padding: 14px 15px; font-size: 15px; outline: none; transition: 0.2s ease; }
+    input:focus { border-color: #111827; box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.08); }
+    .suggestions { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 50; list-style: none; background: white; border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; display: none; max-height: 260px; overflow-y: auto; }
+    .suggestions.active { display: block; }
+    .suggestions li { padding: 13px 15px; cursor: pointer; font-size: 14px; line-height: 1.35; color: #334155; border-bottom: 1px solid #eef2f7; background: white; }
+    .suggestions li:hover, .suggestions li:focus { background: #f8fafc; color: #0f172a; outline: none; }
+    .suggestion-title { font-weight: 800; color: #0f172a; margin-bottom: 3px; }
+    .suggestion-detail { font-size: 12px; color: var(--muted); }
+
+    .location-btn {
+      width: 100%;
+      margin-top: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: #111827;
+      padding: 11px 12px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .location-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .search-btn { border: none; background: var(--primary); color: white; padding: 15px 23px; border-radius: 16px; font-size: 15px; font-weight: 900; cursor: pointer; white-space: nowrap; }
+    .search-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+    .helper, .status { margin-top: 12px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .status { display: none; border: 1px solid var(--border); background: #f8fafc; border-radius: 14px; padding: 11px 12px; }
+    .status.active { display: block; }
+    .status.error { border-color: rgba(239, 68, 68, 0.35); color: #b91c1c; background: rgba(239, 68, 68, 0.05); }
+    .summary { display: none; color: #334155; font-size: 14px; line-height: 1.5; }
+    .summary strong { color: var(--text); }
+    .mode-tabs { display: none; position: sticky; top: 0; z-index: 4; background: rgba(238, 244, 246, 0.94); backdrop-filter: blur(10px); padding: 8px 0 10px; margin-bottom: 10px; overflow-x: auto; gap: 8px; }
+    .mode-tabs.active { display: flex; }
+    .mode-tab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; color: #0f172a; background: white; border: 1px solid var(--border); border-radius: 999px; padding: 9px 13px; font-size: 13px; font-weight: 900; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06); }
+    .mode-tab span { color: var(--muted); font-weight: 800; }
+    .empty-state { text-align: center; background: white; border: 1px dashed #cbd5e1; border-radius: 24px; padding: 36px 20px; color: var(--muted); line-height: 1.45; }
+    .empty-state strong { color: var(--text); }
+    .sections { display: grid; gap: 18px; }
+    .category-section { scroll-margin-top: 72px; }
+    .section-header { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin-bottom: 10px; padding: 0 2px; }
+    .section-title { display: flex; gap: 9px; align-items: center; }
+    .section-icon { width: 37px; height: 37px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; background: white; border: 1px solid var(--border); box-shadow: 0 8px 20px rgba(15,23,42,0.06); font-size: 20px; }
+    .section-header h2 { font-size: 23px; letter-spacing: -0.4px; }
+    .section-header p { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .scroll-hint { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .cards-row { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 10px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+    .card { min-width: 275px; max-width: 330px; flex: 0 0 82%; scroll-snap-align: start; background: var(--panel); border: 1px solid var(--border); border-radius: 26px; padding: 18px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+    @media (min-width: 760px) { .card { flex-basis: 31%; } }
+    .card.best { border-color: rgba(22, 163, 74, 0.45); box-shadow: 0 18px 42px rgba(22, 163, 74, 0.13); }
+    .badge { display: none; position: absolute; top: 14px; right: 14px; background: rgba(22, 163, 74, 0.12); color: #15803d; border: 1px solid rgba(22, 163, 74, 0.22); padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 900; }
+    .card.best .badge { display: inline-block; }
+    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-right: 86px; }
+    .brand-logo { width: 45px; height: 45px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: white; font-size: 18px; background: #334155; }
+    .uber { background: #000; } .cabify { background: #7145d6; } .didi { background: #ff7a00; } .maps, .sube { background: #0f766e; }
+    .brand h3 { font-size: 18px; line-height: 1.15; }
+    .brand p { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .price { font-size: 28px; line-height: 1.08; font-weight: 950; letter-spacing: -1px; margin-bottom: 8px; }
+    .meta { color: #334155; font-size: 13px; margin-bottom: 8px; font-weight: 700; }
+    .detail { color: var(--muted); font-size: 13px; line-height: 1.45; min-height: 42px; margin-bottom: 14px; }
+    .chips { display: flex; gap: 7px; flex-wrap: wrap; margin: 10px 0 14px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: #f8fafc; color: #475569; border-radius: 999px; padding: 6px 9px; font-size: 11px; font-weight: 800; }
+    .travel-btn, .secondary-btn { width: 100%; border: none; background: #111827; color: white; padding: 13px; border-radius: 14px; font-size: 15px; font-weight: 900; cursor: pointer; transition: 0.2s ease; margin-top: 8px; }
+    .secondary-btn { background: #f1f5f9; color: #111827; border: 1px solid var(--border); }
+    .disclaimer { margin-top: 3px; background: white; border: 1px solid var(--border); border-radius: 18px; padding: 13px 15px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+
+    .location-note {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .permission-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: rgba(15, 23, 42, 0.48);
+      backdrop-filter: blur(7px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .permission-backdrop.active {
+      display: flex;
+    }
+
+    .permission-card {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      color: #0f172a;
+      border-radius: 28px;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+      padding: 20px;
+    }
+
+    .permission-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 18px;
+      background: #e0f2fe;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 27px;
+      margin-bottom: 12px;
+    }
+
+    .permission-card h2 {
+      font-size: 22px;
+      letter-spacing: -0.4px;
+      margin-bottom: 8px;
+    }
+
+    .permission-card p {
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.45;
+      margin-bottom: 12px;
+    }
+
+    .permission-list {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 12px;
+      margin-bottom: 14px;
+      color: #334155;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .permission-actions {
+      display: grid;
+      gap: 9px;
+    }
+
+    .permission-actions button {
+      width: 100%;
+      border: none;
+      border-radius: 15px;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .permission-primary {
+      background: #111827;
+      color: white;
+    }
+
+    .permission-secondary {
+      background: #f1f5f9;
+      color: #111827;
+      border: 1px solid var(--border) !important;
+    }
+
+    .toast {
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      bottom: 22px;
+      z-index: 9999;
+      background: #111827;
+      color: white;
+      border-radius: 18px;
+      padding: 14px 16px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.28);
+      font-size: 14px;
+      line-height: 1.45;
+      font-weight: 800;
+      opacity: 0;
+      transform: translateY(16px);
+      pointer-events: none;
+      transition: 0.22s ease;
+    }
+    .toast.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .dev-box { margin-top: 18px; background: white; border: 1px dashed #cbd5e1; border-radius: 20px; padding: 14px; color: var(--muted); font-size: 13px; }
+    .dev-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+    .dev-actions button { border: none; background: #f1f5f9; color: #111827; padding: 12px; border-radius: 14px; font-weight: 900; cursor: pointer; }
+    @media (max-width: 820px) {
+      .fields { grid-template-columns: 1fr; }
+  
+    .location-btn {
+      width: 100%;
+      margin-top: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: #111827;
+      padding: 11px 12px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .location-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .search-btn { width: 100%; }
+      .suggestions { position: relative; top: 8px; margin-bottom: 8px; }
+      .dev-actions { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <header>
+      <div class="logo">R</div>
+      <h1>Remo</h1>
+      <p class="subtitle">Compará auto, moto, envíos y bus desde un solo lugar.</p>
+    </header>
+
+    <section class="search-box">
+      <div class="fields">
+        <div class="field">
+          <label for="origin">Origen</label>
+          <input id="origin" type="text" placeholder="Ej: Teatro Colón" autocomplete="off" />
+          <ul id="originSuggestions" class="suggestions"></ul>
+          <button class="location-btn" type="button" id="useLocationBtn">📍 Usar mi ubicación actual</button>
+          <div class="location-note">Recomendado para Cabify: Remo usa tu ubicación como origen y copia solo el destino.</div>
+        </div>
+        <div class="field">
+          <label for="destination">Destino</label>
+          <input id="destination" type="text" placeholder="Ej: Aeroparque" autocomplete="off" />
+          <ul id="destinationSuggestions" class="suggestions"></ul>
+        </div>
+        <button class="search-btn" id="searchBtn">Buscar</button>
+      </div>
+      <p class="helper">MVP: rangos estimados por Remo. Confirmá precio final y disponibilidad en la app destino.</p>
+      <div id="debugStatus" class="status"></div>
+    </section>
+
+    <section class="summary" id="summary"></section>
+    <nav class="mode-tabs" id="modeTabs"></nav>
+
+    <section id="results">
+      <div class="empty-state">
+        <strong>Ingresá origen y destino</strong><br />
+        Remo va a mostrar opciones por secciones: auto, moto, envíos y bus.
+      </div>
+    </section>
+
+    <section class="dev-box">
+      Test rápido: coordenadas fijas Obelisco → Aeroparque.
+      <div class="dev-actions">
+        <button type="button" onclick="testDeepLink('Uber')">Test Uber</button>
+        <button type="button" onclick="testDeepLink('Cabify')">Test Cabify</button>
+        <button type="button" onclick="testDeepLink('DiDi')">Test DiDi</button>
+      </div>
+    </section>
+
+    <div id="locationPermissionModal" class="permission-backdrop">
+      <div class="permission-card">
+        <div class="permission-icon">📍</div>
+        <h2>Usar tu ubicación actual</h2>
+        <p>
+          Remo puede completar el origen con tu ubicación. Esto mejora el flujo con Cabify porque la app suele usar tu ubicación actual como punto de partida.
+        </p>
+        <div class="permission-list">
+          ✅ No guardamos tu ubicación.<br />
+          ✅ Solo se usa para calcular esta búsqueda.<br />
+          ✅ Después copiamos solo el destino para Cabify.
+        </div>
+        <div class="permission-actions">
+          <button class="permission-primary" type="button" id="confirmLocationPermissionBtn">Compartir ubicación</button>
+          <button class="permission-secondary" type="button" id="cancelLocationPermissionBtn">Ahora no</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+  </main>
+
+  <script>
+    const searchBtn = document.getElementById("searchBtn");
+    const resultsContainer = document.getElementById("results");
+    const summary = document.getElementById("summary");
+    const debugStatus = document.getElementById("debugStatus");
+    const modeTabs = document.getElementById("modeTabs");
+    const toast = document.getElementById("toast");
+    const originInput = document.getElementById("origin");
+    const destinationInput = document.getElementById("destination");
+    const originSuggestions = document.getElementById("originSuggestions");
+    const destinationSuggestions = document.getElementById("destinationSuggestions");
+    const useLocationBtn = document.getElementById("useLocationBtn");
+    const locationPermissionModal = document.getElementById("locationPermissionModal");
+    const confirmLocationPermissionBtn = document.getElementById("confirmLocationPermissionBtn");
+    const cancelLocationPermissionBtn = document.getElementById("cancelLocationPermissionBtn");
+
+    const autocompleteTimers = { origin: null, destination: null };
+    const selectedPlaces = { origin: null, destination: null };
+    let currentOrigin = null;
+    let currentDestination = null;
+
+    function formatARS(value) {
+      return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(value);
+    }
+
+    function escapeHTML(text) {
+      return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+    }
+
+    function setStatus(message, isError = false) {
+      if (!debugStatus) return;
+      debugStatus.textContent = message || "";
+      debugStatus.classList.toggle("active", Boolean(message));
+      debugStatus.classList.toggle("error", Boolean(isError));
+    }
+
+    function showToast(message, duration = 2400) {
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add("active");
+      clearTimeout(showToast.timeout);
+      showToast.timeout = setTimeout(function() {
+        toast.classList.remove("active");
+      }, duration);
+    }
+
+    function getBackendBaseUrl() {
+      if (window.location.protocol === "http:" || window.location.protocol === "https:") return window.location.origin;
+      return "http://192.168.1.36:3000";
+    }
+
+    function getPlatformMeta(appName) {
+      const name = String(appName || "").toLowerCase();
+      if (name.includes("uber")) return { logo: "U", className: "uber" };
+      if (name.includes("cabify")) return { logo: "C", className: "cabify" };
+      if (name.includes("didi")) return { logo: "D", className: "didi" };
+      if (name.includes("sube")) return { logo: "S", className: "sube" };
+      if (name.includes("google")) return { logo: "G", className: "maps" };
+      return { logo: "?", className: "" };
+    }
+
+    function getShortName(place) {
+      if (place.name) return place.name;
+      if (place.address) return place.address.road || place.address.neighbourhood || place.address.suburb || place.address.city || place.address.town || place.address.village || "Dirección encontrada";
+      return "Dirección encontrada";
+    }
+
+    function normalizePlaceForTravel(place, fallbackName = "Dirección") {
+      return {
+        lat: Number(place.lat),
+        lng: Number(place.lng ?? place.lon),
+        name: place.name || place.displayName || fallbackName,
+        displayName: place.displayName || place.name || fallbackName,
+        isCurrentLocation: Boolean(place.isCurrentLocation)
+      };
+    }
+
+    function saveCurrentPlace(type, place) {
+      const normalized = normalizePlaceForTravel(place, type === "origin" ? "Origen" : "Destino");
+      if (type === "origin") currentOrigin = normalized;
+      if (type === "destination") currentDestination = normalized;
+      return normalized;
+    }
+
+    function buildGoogleMapsRouteUrl(origin, destination, travelMode = "driving") {
+      return `https://www.google.com/maps/dir/?api=1` +
+        `&origin=${encodeURIComponent(`${origin.lat},${origin.lng}`)}` +
+        `&destination=${encodeURIComponent(`${destination.lat},${destination.lng}`)}` +
+        `&travelmode=${encodeURIComponent(travelMode)}`;
+    }
+
+    function hideSuggestions(listElement) {
+      listElement.classList.remove("active");
+      listElement.innerHTML = "";
+    }
+
+    function hideAllSuggestions() {
+      hideSuggestions(originSuggestions);
+      hideSuggestions(destinationSuggestions);
+    }
+
+    async function fetchAddressSuggestions(query) {
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+      url.searchParams.set("q", query);
+      url.searchParams.set("format", "json");
+      url.searchParams.set("limit", "5");
+      url.searchParams.set("addressdetails", "1");
+      url.searchParams.set("accept-language", "es");
+      url.searchParams.set("countrycodes", "ar");
+      const response = await fetch(url.toString(), { method: "GET", headers: { "Accept": "application/json" } });
+      if (!response.ok) throw new Error("No se pudieron cargar las sugerencias.");
+      return await response.json();
+    }
+
+    function renderSuggestions(listElement, places, inputElement, type) {
+      listElement.innerHTML = "";
+      if (!places || places.length === 0) {
+        const emptyItem = document.createElement("li");
+        emptyItem.className = "suggestion-empty";
+        emptyItem.textContent = "No encontramos sugerencias. Probá con una dirección más específica.";
+        listElement.appendChild(emptyItem);
+        listElement.classList.add("active");
+        return;
+      }
+      places.forEach((place) => {
+        const item = document.createElement("li");
+        item.tabIndex = 0;
+        const title = document.createElement("div");
+        title.className = "suggestion-title";
+        title.textContent = getShortName(place);
+        const detail = document.createElement("div");
+        detail.className = "suggestion-detail";
+        detail.textContent = place.display_name;
+        item.appendChild(title);
+        item.appendChild(detail);
+
+        function selectPlace(event) {
+          event.preventDefault();
+          const selectedPlace = {
+            lat: parseFloat(place.lat),
+            lon: parseFloat(place.lon),
+            lng: parseFloat(place.lon),
+            name: getShortName(place),
+            displayName: place.display_name
+          };
+          inputElement.value = place.display_name;
+          selectedPlaces[type] = selectedPlace;
+          saveCurrentPlace(type, selectedPlace);
+          hideSuggestions(listElement);
+        }
+
+        item.addEventListener("mousedown", selectPlace);
+        item.addEventListener("keydown", function(event) {
+          if (event.key === "Enter") {
+            selectPlace(event);
+            inputElement.focus();
+          }
+        });
+        listElement.appendChild(item);
+      });
+      listElement.classList.add("active");
+    }
+
+    function setupAutocomplete(inputElement, listElement, type) {
+      inputElement.addEventListener("input", function() {
+        const query = inputElement.value.trim();
+        selectedPlaces[type] = null;
+        if (type === "origin") currentOrigin = null;
+        if (type === "destination") currentDestination = null;
+        clearTimeout(autocompleteTimers[type]);
+        if (query.length <= 3) {
+          hideSuggestions(listElement);
+          return;
+        }
+        autocompleteTimers[type] = setTimeout(async function() {
+          try {
+            const places = await fetchAddressSuggestions(query);
+            renderSuggestions(listElement, places, inputElement, type);
+          } catch (error) {
+            hideSuggestions(listElement);
+          }
+        }, 400);
+      });
+      inputElement.addEventListener("focus", function() {
+        const query = inputElement.value.trim();
+        if (query.length > 3 && listElement.children.length > 0) listElement.classList.add("active");
+      });
+    }
+
+    async function geocodeAddress(address, label) {
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+      url.searchParams.set("q", address);
+      url.searchParams.set("format", "json");
+      url.searchParams.set("limit", "1");
+      url.searchParams.set("addressdetails", "1");
+      url.searchParams.set("accept-language", "es");
+      url.searchParams.set("countrycodes", "ar");
+      const response = await fetch(url.toString(), { method: "GET", headers: { "Accept": "application/json" } });
+      if (!response.ok) throw new Error("No se pudo conectar con el servicio de búsqueda de direcciones.");
+      const data = await response.json();
+      if (!data || data.length === 0) throw new Error(`No se pudo encontrar la dirección de ${label}. Probá escribiendo una dirección más específica.`);
+      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), lng: parseFloat(data[0].lon), name: getShortName(data[0]), displayName: data[0].display_name };
+    }
+
+    async function resolvePlace(type, address, label) {
+      const selectedPlace = selectedPlaces[type];
+      if (selectedPlace && selectedPlace.displayName === address) return selectedPlace;
+      const place = await geocodeAddress(address, label);
+      selectedPlaces[type] = place;
+      saveCurrentPlace(type, place);
+      return place;
+    }
+
+    function getSectionMinPrice(section) {
+      const first = (section.items || [])[0];
+      return first ? `desde ${formatARS(first.price_min)}` : "";
+    }
+
+    function renderModeTabs(sections) {
+      modeTabs.innerHTML = sections.map((section) => `
+        <a href="#section-${escapeHTML(section.id)}" class="mode-tab">
+          ${escapeHTML(section.icon || "")} ${escapeHTML(section.title)}
+          <span>${escapeHTML(getSectionMinPrice(section))}</span>
+        </a>
+      `).join("");
+      modeTabs.classList.add("active");
+    }
+
+    function renderSummary(data, origin, destination) {
+      const route = data.route || {};
+      const context = data.context || {};
+      const factors = context.factors || [];
+      summary.style.display = "block";
+      summary.innerHTML = `
+        Ruta: <strong>${escapeHTML(origin)}</strong> → <strong>${escapeHTML(destination)}</strong><br />
+        Distancia: <strong>${route.distance_km || "?"} km</strong> ·
+        Duración: <strong>${route.duration_min || "?"} min</strong> ·
+        Fuente: <strong>${escapeHTML(route.source || "sin dato")}</strong>
+        <div class="chips">
+          <span class="chip">Demanda: ${escapeHTML(context.demandLevel || "normal")}</span>
+          <span class="chip">Multiplicador: ${escapeHTML(context.multiplier || 1)}x</span>
+          ${factors.length ? factors.map((factor) => `<span class="chip">${escapeHTML(factor)}</span>`).join("") : `<span class="chip">sin factores extra</span>`}
+        </div>
+      `;
+    }
+
+    function renderResults(data, origin, destination, originCoords, destinationCoords) {
+      currentOrigin = saveCurrentPlace("origin", { ...originCoords, name: originCoords.name || originCoords.displayName || origin });
+      currentDestination = saveCurrentPlace("destination", { ...destinationCoords, name: destinationCoords.name || destinationCoords.displayName || destination });
+      renderSummary(data, origin, destination);
+      const sections = data.sections || [];
+      if (!sections.length) {
+        modeTabs.classList.remove("active");
+        resultsContainer.innerHTML = `<div class="empty-state"><strong>No encontramos opciones</strong><br />Probá otra ruta o intentá nuevamente.</div>`;
+        return;
+      }
+      renderModeTabs(sections);
+      resultsContainer.className = "sections";
+      resultsContainer.innerHTML = sections.map((section) => {
+        const cards = (section.items || []).map((item, index) => {
+          const meta = getPlatformMeta(item.app);
+          const integration = item.integration ? `<span class="chip">${escapeHTML(item.integration)}</span>` : "";
+          return `
+            <article class="card ${index === 0 ? "best" : ""}">
+              <span class="badge">Más barato</span>
+              <div class="brand">
+                <div class="brand-logo ${meta.className}">${escapeHTML(meta.logo)}</div>
+                <div>
+                  <h3>${escapeHTML(item.icon || "")} ${escapeHTML(item.product || item.app)}</h3>
+                  <p>${escapeHTML(item.app || "")}</p>
+                </div>
+              </div>
+              <div class="price">${formatARS(item.price_min)} - ${formatARS(item.price_max)}</div>
+              <div class="meta">${item.duration_min ? `${item.duration_min} min` : ""}${item.distance_km ? ` · ${item.distance_km} km` : ""}</div>
+              <p class="detail">${escapeHTML(item.description || "Precio estimado por Remo.")}</p>
+              <div class="chips"><span class="chip">Confianza: ${escapeHTML(item.confidence || "media")}</span>${integration}</div>
+              <button class="travel-btn" type="button" data-action="${escapeHTML(item.action)}" data-app="${escapeHTML(item.app)}" data-product="${escapeHTML(item.product)}">
+                ${item.action === "google_maps_transit" ? "Ver en Maps" : item.action === "cabify_app" ? "Copiar destino y abrir" : item.action === "didi_or_maps" ? "Copiar destino y abrir" : "Viajar"}
+              </button>
+              <button class="secondary-btn" type="button" data-secondary="maps">Abrir Maps</button>
+            </article>
+          `;
+        }).join("");
+        return `
+          <section class="category-section" id="section-${escapeHTML(section.id)}">
+            <div class="section-header">
+              <div class="section-title">
+                <div class="section-icon">${escapeHTML(section.icon || "")}</div>
+                <div><h2>${escapeHTML(section.title)}</h2><p>${escapeHTML(section.subtitle || "")}</p></div>
+              </div>
+              <div class="scroll-hint">Deslizá →</div>
+            </div>
+            <div class="cards-row">${cards}</div>
+          </section>
+        `;
+      }).join("") + `<div class="disclaimer">Los valores son rangos estimados por Remo. Confirmá precio final, disponibilidad, producto exacto y tiempos de espera en la app destino.</div>`;
+      resultsContainer.querySelectorAll(".travel-btn").forEach((button) => {
+        button.addEventListener("click", function() { travel(button.dataset.action, button.dataset.app, button.dataset.product); });
+      });
+      resultsContainer.querySelectorAll("[data-secondary='maps']").forEach((button) => {
+        button.addEventListener("click", function() { window.location.href = buildGoogleMapsRouteUrl(currentOrigin, currentDestination, "driving"); });
+      });
+    }
+
+    function openWithFallback(appUrl, fallbackUrl, timeoutMs = 2000) {
+      let appOpened = false;
+      function markAsOpened() { appOpened = true; cleanup(); }
+      function handleVisibilityChange() { if (document.hidden) markAsOpened(); }
+      function cleanup() {
+        window.removeEventListener("blur", markAsOpened);
+        window.removeEventListener("pagehide", markAsOpened);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      }
+      window.addEventListener("blur", markAsOpened);
+      window.addEventListener("pagehide", markAsOpened);
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      window.location.href = appUrl;
+      setTimeout(function() {
+        cleanup();
+        if (!appOpened && !document.hidden && fallbackUrl) window.location.href = fallbackUrl;
+      }, timeoutMs);
+    }
+
+    function buildUberV2Url() {
+      const originLat = encodeURIComponent(currentOrigin.lat);
+      const originLng = encodeURIComponent(currentOrigin.lng);
+      const originName = encodeURIComponent(currentOrigin.name || "Origen");
+      const originAddress = encodeURIComponent(currentOrigin.displayName || currentOrigin.name || "Origen");
+      const destinationLat = encodeURIComponent(currentDestination.lat);
+      const destinationLng = encodeURIComponent(currentDestination.lng);
+      const destinationName = encodeURIComponent(currentDestination.name || "Destino");
+      const destinationAddress = encodeURIComponent(currentDestination.displayName || currentDestination.name || "Destino");
+      return `uber://riderequest?pickup[latitude]=${originLat}&pickup[longitude]=${originLng}&pickup[nickname]=${originName}&pickup[formatted_address]=${originAddress}&dropoff[latitude]=${destinationLat}&dropoff[longitude]=${destinationLng}&dropoff[nickname]=${destinationName}&dropoff[formatted_address]=${destinationAddress}`;
+    }
+
+    function getDestinationTextForClipboard() {
+      const typedDestination = destinationInput.value.trim();
+
+      if (typedDestination) {
+        return typedDestination;
+      }
+
+      if (!currentDestination) {
+        return "";
+      }
+
+      return currentDestination.displayName || currentDestination.name || "Destino seleccionado";
+    }
+
+    function isUsingCurrentLocationOrigin() {
+      return Boolean(currentOrigin?.isCurrentLocation) ||
+        String(originInput.value || "").toLowerCase().includes("mi ubicación actual");
+    }
+
+    function getOriginAndDestinationTextForClipboard() {
+      const originText = currentOrigin?.displayName || currentOrigin?.name || "Origen seleccionado";
+      const destinationText = currentDestination?.displayName || currentDestination?.name || "Destino seleccionado";
+      return `Origen: ${originText}
+Destino: ${destinationText}`;
+    }
+
+    async function copyTextBestEffort(textToCopy, successMessage, fallbackMessage) {
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        showToast(successMessage);
+        return true;
+      } catch (error) {
+        console.warn("No se pudo copiar al portapapeles:", error);
+        showToast(fallbackMessage || textToCopy, 4200);
+        return false;
+      }
+    }
+
+    async function travelCabify() {
+      if (!currentOrigin || !currentDestination) {
+        alert("Primero buscá una ruta para poder viajar.");
+        return;
+      }
+
+      const destinationText = getDestinationTextForClipboard();
+      const originHint = isUsingCurrentLocationOrigin()
+        ? "Cabify usará tu ubicación actual como origen."
+        : "Tip: para Cabify conviene usar “mi ubicación actual” como origen.";
+
+      await copyTextBestEffort(
+        destinationText,
+        `Destino copiado ✅ ${originHint}`,
+        `No pudimos copiar. Destino: ${destinationText}`
+      );
+
+      setTimeout(function() {
+        const playStoreUrl = "https://play.google.com/store/apps/details?id=com.cabify.rider";
+        const cabifyIntent =
+          "intent://#Intent;" +
+          "scheme=cabify;" +
+          "package=com.cabify.rider;" +
+          "S.browser_fallback_url=" +
+          encodeURIComponent(playStoreUrl) +
+          ";end";
+
+        window.location.href = cabifyIntent;
+      }, 850);
+    }
+
+    async function travelDidi() {
+      if (!currentOrigin || !currentDestination) {
+        alert("Primero buscá una ruta para poder viajar.");
+        return;
+      }
+
+      const routeText = getOriginAndDestinationTextForClipboard();
+      await copyTextBestEffort(
+        routeText,
+        "Ruta copiada ✅ Si DiDi no carga, pegá destino manualmente.",
+        `No pudimos copiar. ${routeText}`
+      );
+
+      setTimeout(function() {
+        const googleMapsDrivingUrl = buildGoogleMapsRouteUrl(currentOrigin, currentDestination, "driving");
+        const didiUrl = `didipas://passenger/order?from_lat=${encodeURIComponent(currentOrigin.lat)}&from_lng=${encodeURIComponent(currentOrigin.lng)}&to_lat=${encodeURIComponent(currentDestination.lat)}&to_lng=${encodeURIComponent(currentDestination.lng)}`;
+        openWithFallback(didiUrl, googleMapsDrivingUrl, 1600);
+      }, 850);
+    }
+
+    function travel(action, appName, productName) {
+      if (!currentOrigin || !currentDestination) {
+        alert("Primero buscá una ruta para poder viajar.");
+        return;
+      }
+      const googleMapsDrivingUrl = buildGoogleMapsRouteUrl(currentOrigin, currentDestination, "driving");
+      if (action === "uber_v2") {
+        openWithFallback(buildUberV2Url(), googleMapsDrivingUrl, 2200);
+        return;
+      }
+      if (action === "cabify_app") {
+        travelCabify();
+        return;
+      }
+      if (action === "didi_or_maps") {
+        travelDidi();
+        return;
+      }
+      if (action === "google_maps_transit") {
+        window.location.href = buildGoogleMapsRouteUrl(currentOrigin, currentDestination, "transit");
+        return;
+      }
+      window.location.href = googleMapsDrivingUrl;
+    }
+
+    function testDeepLink(platformName) {
+      currentOrigin = { lat: -34.6037345, lng: -58.3815704, name: "Obelisco", displayName: "Obelisco, Avenida Corrientes, Buenos Aires, Argentina" };
+      currentDestination = { lat: -34.5580307, lng: -58.4170085, name: "Aeroparque", displayName: "Aeroparque Internacional Jorge Newbery, Buenos Aires, Argentina" };
+      if (platformName === "Uber") travel("uber_v2", "Uber", "UberX");
+      if (platformName === "Cabify") travel("cabify_app", "Cabify", "Cabify");
+      if (platformName === "DiDi") travel("didi_or_maps", "DiDi", "DiDi Auto");
+    }
+
+
+    function reverseGeocodeCurrentLocation(lat, lng) {
+      const url = new URL("https://nominatim.openstreetmap.org/reverse");
+      url.searchParams.set("lat", lat);
+      url.searchParams.set("lon", lng);
+      url.searchParams.set("format", "json");
+      url.searchParams.set("addressdetails", "1");
+      url.searchParams.set("accept-language", "es");
+
+      return fetch(url.toString(), {
+        method: "GET",
+        headers: { "Accept": "application/json" }
+      }).then(function(response) {
+        if (!response.ok) {
+          throw new Error("No se pudo leer la dirección actual.");
+        }
+        return response.json();
+      });
+    }
+
+
+    function openLocationPermissionModal() {
+      if (!navigator.geolocation) {
+        alert("Tu navegador no permite obtener ubicación actual.");
+        return;
+      }
+
+      if (locationPermissionModal) {
+        locationPermissionModal.classList.add("active");
+      } else {
+        useCurrentLocationAsOrigin();
+      }
+    }
+
+    function closeLocationPermissionModal() {
+      if (locationPermissionModal) {
+        locationPermissionModal.classList.remove("active");
+      }
+    }
+
+    async function useCurrentLocationAsOrigin() {
+      if (!navigator.geolocation) {
+        alert("Tu navegador no permite obtener ubicación actual.");
+        return;
+      }
+
+      useLocationBtn.disabled = true;
+      useLocationBtn.textContent = "Buscando ubicación...";
+      setStatus("Pidiendo permiso de ubicación al navegador...");
+
+      navigator.geolocation.getCurrentPosition(async function(position) {
+        try {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const accuracy = Math.round(position.coords.accuracy || 0);
+
+          let displayName = `Mi ubicación actual (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+          let shortName = "Mi ubicación actual";
+
+          try {
+            const reverseData = await reverseGeocodeCurrentLocation(lat, lng);
+            if (reverseData && reverseData.display_name) {
+              displayName = reverseData.display_name;
+              shortName = getShortName(reverseData) || "Mi ubicación actual";
+            }
+          } catch (reverseError) {
+            console.warn("No se pudo hacer reverse geocoding:", reverseError);
+          }
+
+          const currentPlace = {
+            lat,
+            lon: lng,
+            lng,
+            name: shortName,
+            displayName,
+            isCurrentLocation: true
+          };
+
+          selectedPlaces.origin = currentPlace;
+          saveCurrentPlace("origin", currentPlace);
+          originInput.value = displayName;
+          hideSuggestions(originSuggestions);
+
+          setStatus(`Ubicación actual cargada como origen. Precisión aproximada: ${accuracy} m.`);
+          showToast("Ubicación actual cargada como origen ✅");
+        } catch (error) {
+          console.error(error);
+          setStatus("No pudimos convertir tu ubicación en una dirección. Probá escribiendo el origen manualmente.", true);
+        } finally {
+          useLocationBtn.disabled = false;
+          useLocationBtn.textContent = "📍 Usar mi ubicación actual";
+        }
+      }, function(error) {
+        console.warn("Error geolocation:", error);
+
+        let message = "No pudimos acceder a tu ubicación.";
+
+        if (error.code === 1) {
+          message = "Permiso de ubicación denegado. Activá el permiso del navegador para Remo.";
+        }
+
+        if (error.code === 2) {
+          message = "No se pudo determinar tu ubicación. Verificá GPS/Wi‑Fi.";
+        }
+
+        if (error.code === 3) {
+          message = "La búsqueda de ubicación tardó demasiado. Probá de nuevo.";
+        }
+
+        setStatus(message, true);
+        alert(message);
+        useLocationBtn.disabled = false;
+        useLocationBtn.textContent = "📍 Usar mi ubicación actual";
+      }, {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 30000
+      });
+    }
+
+
+    async function handleSearch() {
+      const origin = originInput.value.trim();
+      const destination = destinationInput.value.trim();
+      if (!origin || !destination) {
+        alert("Completá el origen y el destino para buscar.");
+        return;
+      }
+      hideAllSuggestions();
+      searchBtn.disabled = true;
+      searchBtn.textContent = "Buscando...";
+      setStatus("Resolviendo direcciones, clima, distancia y opciones...");
+      try {
+        const originCoords = await resolvePlace("origin", origin, "origen");
+        const destinationCoords = await resolvePlace("destination", destination, "destino");
+        const optionsUrl = `${getBackendBaseUrl()}/api/options?start_lat=${encodeURIComponent(originCoords.lat)}&start_lng=${encodeURIComponent(originCoords.lng ?? originCoords.lon)}&end_lat=${encodeURIComponent(destinationCoords.lat)}&end_lng=${encodeURIComponent(destinationCoords.lng ?? destinationCoords.lon)}`;
+        const response = await fetch(optionsUrl, { method: "GET", headers: { "Accept": "application/json" } });
+        let data = null;
+        try { data = await response.json(); } catch (jsonError) { throw new Error("El backend respondió, pero no devolvió JSON válido."); }
+        if (!response.ok) throw new Error(data.message || "No se pudieron obtener opciones desde el backend de Remo.");
+        renderResults(data, origin, destination, originCoords, destinationCoords);
+        setStatus("Listo: opciones calculadas por sección.");
+      } catch (error) {
+        console.error("Error en handleSearch:", error);
+        setStatus(error.message || "Ocurrió un problema al buscar el viaje.", true);
+        alert(error.message || "Ocurrió un problema al buscar el viaje. Probá nuevamente.");
+      } finally {
+        searchBtn.disabled = false;
+        searchBtn.textContent = "Buscar";
+      }
+    }
+
+    setupAutocomplete(originInput, originSuggestions, "origin");
+    setupAutocomplete(destinationInput, destinationSuggestions, "destination");
+    if (useLocationBtn) {
+      useLocationBtn.addEventListener("click", openLocationPermissionModal);
+    }
+
+    if (confirmLocationPermissionBtn) {
+      confirmLocationPermissionBtn.addEventListener("click", function() {
+        closeLocationPermissionModal();
+        useCurrentLocationAsOrigin();
+      });
+    }
+
+    if (cancelLocationPermissionBtn) {
+      cancelLocationPermissionBtn.addEventListener("click", closeLocationPermissionModal);
+    }
+
+    if (locationPermissionModal) {
+      locationPermissionModal.addEventListener("click", function(event) {
+        if (event.target === locationPermissionModal) {
+          closeLocationPermissionModal();
+        }
+      });
+    }
+
+    searchBtn.addEventListener("click", handleSearch);
+    document.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        const activeElement = document.activeElement;
+        const isSuggestion = activeElement && activeElement.closest && activeElement.closest(".suggestions");
+        if (!isSuggestion) handleSearch();
+      }
+    });
+    document.addEventListener("click", function(event) {
+      const clickedInsideField = event.target.closest(".field");
+      if (!clickedInsideField) hideAllSuggestions();
+    });
+  </script>
+</body>
+</html>
