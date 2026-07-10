@@ -1,968 +1,463 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Remo - Comparador de viajes</title>
 
-  <style>
-    :root {
-      --bg: #eef4f6;
-      --panel: #ffffff;
-      --text: #0f172a;
-      --muted: #64748b;
-      --primary: #111827;
-      --border: #dbe3ea;
-      --shadow: 0 18px 40px rgba(15, 23, 42, 0.10);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    html { scroll-behavior: smooth; }
-    body { min-height: 100vh; background: radial-gradient(circle at top left, rgba(14, 165, 233, 0.18), transparent 30%), linear-gradient(180deg, #edf7f7 0%, #f8fafc 100%); color: var(--text); padding: 18px 12px 38px; }
-    .app { width: 100%; max-width: 1080px; margin: 0 auto; }
-    header { text-align: center; margin-bottom: 18px; }
-    .logo { width: 54px; height: 54px; border-radius: 18px; background: #111827; color: white; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; box-shadow: var(--shadow); margin-bottom: 12px; }
-    h1 { font-size: clamp(34px, 7vw, 54px); letter-spacing: -1.5px; margin-bottom: 4px; }
-    .subtitle { color: var(--muted); font-size: 15px; }
-    .search-box, .summary, .dev-box { background: rgba(255,255,255,0.94); border: 1px solid var(--border); backdrop-filter: blur(14px); border-radius: 28px; padding: 16px; box-shadow: var(--shadow); margin-bottom: 14px; }
-    .fields { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
-    .field { position: relative; }
-    .field label { display: block; font-size: 13px; font-weight: 800; margin-bottom: 8px; color: #334155; }
-    input { width: 100%; border: 1px solid var(--border); background: white; color: var(--text); border-radius: 16px; padding: 14px 15px; font-size: 15px; outline: none; transition: 0.2s ease; }
-    input:focus { border-color: #111827; box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.08); }
-    .suggestions { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 50; list-style: none; background: white; border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; display: none; max-height: 260px; overflow-y: auto; }
-    .suggestions.active { display: block; }
-    .suggestions li { padding: 13px 15px; cursor: pointer; font-size: 14px; line-height: 1.35; color: #334155; border-bottom: 1px solid #eef2f7; background: white; }
-    .suggestions li:hover, .suggestions li:focus { background: #f8fafc; color: #0f172a; outline: none; }
-    .suggestion-title { font-weight: 800; color: #0f172a; margin-bottom: 3px; }
-    .suggestion-detail { font-size: 12px; color: var(--muted); }
-
-    .location-btn {
-      width: 100%;
-      margin-top: 8px;
-      border: 1px solid var(--border);
-      background: #f8fafc;
-      color: #111827;
-      padding: 11px 12px;
-      border-radius: 14px;
-      font-size: 13px;
-      font-weight: 900;
-      cursor: pointer;
-    }
-
-    .location-btn:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
-    }
-
-    .search-btn { border: none; background: var(--primary); color: white; padding: 15px 23px; border-radius: 16px; font-size: 15px; font-weight: 900; cursor: pointer; white-space: nowrap; }
-    .search-btn:disabled { opacity: 0.65; cursor: not-allowed; }
-    .helper, .status { margin-top: 12px; color: var(--muted); font-size: 13px; line-height: 1.45; }
-    .status { display: none; border: 1px solid var(--border); background: #f8fafc; border-radius: 14px; padding: 11px 12px; }
-    .status.active { display: block; }
-    .status.error { border-color: rgba(239, 68, 68, 0.35); color: #b91c1c; background: rgba(239, 68, 68, 0.05); }
-    .summary { display: none; color: #334155; font-size: 14px; line-height: 1.5; }
-    .summary strong { color: var(--text); }
-    .mode-tabs { display: none; position: sticky; top: 0; z-index: 4; background: rgba(238, 244, 246, 0.94); backdrop-filter: blur(10px); padding: 8px 0 10px; margin-bottom: 10px; overflow-x: auto; gap: 8px; }
-    .mode-tabs.active { display: flex; }
-    .mode-tab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; color: #0f172a; background: white; border: 1px solid var(--border); border-radius: 999px; padding: 9px 13px; font-size: 13px; font-weight: 900; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06); }
-    .mode-tab span { color: var(--muted); font-weight: 800; }
-    .empty-state { text-align: center; background: white; border: 1px dashed #cbd5e1; border-radius: 24px; padding: 36px 20px; color: var(--muted); line-height: 1.45; }
-    .empty-state strong { color: var(--text); }
-    .sections { display: grid; gap: 18px; }
-    .category-section { scroll-margin-top: 72px; }
-    .section-header { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin-bottom: 10px; padding: 0 2px; }
-    .section-title { display: flex; gap: 9px; align-items: center; }
-    .section-icon { width: 37px; height: 37px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; background: white; border: 1px solid var(--border); box-shadow: 0 8px 20px rgba(15,23,42,0.06); font-size: 20px; }
-    .section-header h2 { font-size: 23px; letter-spacing: -0.4px; }
-    .section-header p { color: var(--muted); font-size: 13px; margin-top: 2px; }
-    .scroll-hint { color: var(--muted); font-size: 12px; white-space: nowrap; }
-    .cards-row { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 10px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
-    .card { min-width: 275px; max-width: 330px; flex: 0 0 82%; scroll-snap-align: start; background: var(--panel); border: 1px solid var(--border); border-radius: 26px; padding: 18px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
-    @media (min-width: 760px) { .card { flex-basis: 31%; } }
-    .card.best { border-color: rgba(22, 163, 74, 0.45); box-shadow: 0 18px 42px rgba(22, 163, 74, 0.13); }
-    .badge { display: none; position: absolute; top: 14px; right: 14px; background: rgba(22, 163, 74, 0.12); color: #15803d; border: 1px solid rgba(22, 163, 74, 0.22); padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 900; }
-    .card.best .badge { display: inline-block; }
-    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-right: 86px; }
-    .brand-logo { width: 45px; height: 45px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: white; font-size: 18px; background: #334155; }
-    .uber { background: #000; } .cabify { background: #7145d6; } .didi { background: #ff7a00; } .maps, .sube { background: #0f766e; }
-    .brand h3 { font-size: 18px; line-height: 1.15; }
-    .brand p { color: var(--muted); font-size: 12px; margin-top: 2px; }
-    .price { font-size: 28px; line-height: 1.08; font-weight: 950; letter-spacing: -1px; margin-bottom: 8px; }
-    .meta { color: #334155; font-size: 13px; margin-bottom: 8px; font-weight: 700; }
-    .detail { color: var(--muted); font-size: 13px; line-height: 1.45; min-height: 42px; margin-bottom: 14px; }
-    .chips { display: flex; gap: 7px; flex-wrap: wrap; margin: 10px 0 14px; }
-    .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: #f8fafc; color: #475569; border-radius: 999px; padding: 6px 9px; font-size: 11px; font-weight: 800; }
-    .travel-btn, .secondary-btn { width: 100%; border: none; background: #111827; color: white; padding: 13px; border-radius: 14px; font-size: 15px; font-weight: 900; cursor: pointer; transition: 0.2s ease; margin-top: 8px; }
-    .secondary-btn { background: #f1f5f9; color: #111827; border: 1px solid var(--border); }
-    .disclaimer { margin-top: 3px; background: white; border: 1px solid var(--border); border-radius: 18px; padding: 13px 15px; color: var(--muted); font-size: 13px; line-height: 1.45; }
-
-
-    .location-note {
-      margin-top: 7px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-
-    .permission-backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: 10000;
-      background: rgba(15, 23, 42, 0.48);
-      backdrop-filter: blur(7px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-    }
-
-    .permission-backdrop.active {
-      display: flex;
-    }
-
-    .permission-card {
-      width: 100%;
-      max-width: 420px;
-      background: #ffffff;
-      color: #0f172a;
-      border-radius: 28px;
-      border: 1px solid var(--border);
-      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
-      padding: 20px;
-    }
-
-    .permission-icon {
-      width: 54px;
-      height: 54px;
-      border-radius: 18px;
-      background: #e0f2fe;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 27px;
-      margin-bottom: 12px;
-    }
-
-    .permission-card h2 {
-      font-size: 22px;
-      letter-spacing: -0.4px;
-      margin-bottom: 8px;
-    }
-
-    .permission-card p {
-      color: #475569;
-      font-size: 14px;
-      line-height: 1.45;
-      margin-bottom: 12px;
-    }
-
-    .permission-list {
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 12px;
-      margin-bottom: 14px;
-      color: #334155;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .permission-actions {
-      display: grid;
-      gap: 9px;
-    }
-
-    .permission-actions button {
-      width: 100%;
-      border: none;
-      border-radius: 15px;
-      padding: 13px;
-      font-size: 15px;
-      font-weight: 900;
-      cursor: pointer;
-    }
-
-    .permission-primary {
-      background: #111827;
-      color: white;
-    }
-
-    .permission-secondary {
-      background: #f1f5f9;
-      color: #111827;
-      border: 1px solid var(--border) !important;
-    }
-
-    .toast {
-      position: fixed;
-      left: 16px;
-      right: 16px;
-      bottom: 22px;
-      z-index: 9999;
-      background: #111827;
-      color: white;
-      border-radius: 18px;
-      padding: 14px 16px;
-      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.28);
-      font-size: 14px;
-      line-height: 1.45;
-      font-weight: 800;
-      opacity: 0;
-      transform: translateY(16px);
-      pointer-events: none;
-      transition: 0.22s ease;
-    }
-    .toast.active {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .dev-box { margin-top: 18px; background: white; border: 1px dashed #cbd5e1; border-radius: 20px; padding: 14px; color: var(--muted); font-size: 13px; }
-    .dev-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
-    .dev-actions button { border: none; background: #f1f5f9; color: #111827; padding: 12px; border-radius: 14px; font-weight: 900; cursor: pointer; }
-    @media (max-width: 820px) {
-      .fields { grid-template-columns: 1fr; }
-  
-    .location-btn {
-      width: 100%;
-      margin-top: 8px;
-      border: 1px solid var(--border);
-      background: #f8fafc;
-      color: #111827;
-      padding: 11px 12px;
-      border-radius: 14px;
-      font-size: 13px;
-      font-weight: 900;
-      cursor: pointer;
-    }
-
-    .location-btn:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
-    }
-
-    .search-btn { width: 100%; }
-      .suggestions { position: relative; top: 8px; margin-bottom: 8px; }
-      .dev-actions { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-
-<body>
-  <main class="app">
-    <header>
-      <div class="logo">R</div>
-      <h1>Remo</h1>
-      <p class="subtitle">Compará auto, moto, envíos y bus desde un solo lugar.</p>
-    </header>
-
-    <section class="search-box">
-      <div class="fields">
-        <div class="field">
-          <label for="origin">Origen</label>
-          <input id="origin" type="text" placeholder="Ej: Teatro Colón" autocomplete="off" />
-          <ul id="originSuggestions" class="suggestions"></ul>
-          <button class="location-btn" type="button" id="useLocationBtn">📍 Usar mi ubicación actual</button>
-          <div class="location-note">Recomendado para Cabify: Remo usa tu ubicación como origen y copia solo el destino.</div>
-        </div>
-        <div class="field">
-          <label for="destination">Destino</label>
-          <input id="destination" type="text" placeholder="Ej: Aeroparque" autocomplete="off" />
-          <ul id="destinationSuggestions" class="suggestions"></ul>
-        </div>
-        <button class="search-btn" id="searchBtn">Buscar</button>
-      </div>
-      <p class="helper">MVP: rangos estimados por Remo. Confirmá precio final y disponibilidad en la app destino.</p>
-      <div id="debugStatus" class="status"></div>
-    </section>
-
-    <section class="summary" id="summary"></section>
-    <nav class="mode-tabs" id="modeTabs"></nav>
-
-    <section id="results">
-      <div class="empty-state">
-        <strong>Ingresá origen y destino</strong><br />
-        Remo va a mostrar opciones por secciones: auto, moto, envíos y bus.
-      </div>
-    </section>
-
-    <section class="dev-box">
-      Test rápido: coordenadas fijas Obelisco → Aeroparque.
-      <div class="dev-actions">
-        <button type="button" onclick="testDeepLink('Uber')">Test Uber</button>
-        <button type="button" onclick="testDeepLink('Cabify')">Test Cabify</button>
-        <button type="button" onclick="testDeepLink('DiDi')">Test DiDi</button>
-      </div>
-    </section>
-
-    <div id="locationPermissionModal" class="permission-backdrop">
-      <div class="permission-card">
-        <div class="permission-icon">📍</div>
-        <h2>Usar tu ubicación actual</h2>
-        <p>
-          Remo puede completar el origen con tu ubicación. Esto mejora el flujo con Cabify porque la app suele usar tu ubicación actual como punto de partida.
-        </p>
-        <div class="permission-list">
-          ✅ No guardamos tu ubicación.<br />
-          ✅ Solo se usa para calcular esta búsqueda.<br />
-          ✅ Después copiamos solo el destino para Cabify.
-        </div>
-        <div class="permission-actions">
-          <button class="permission-primary" type="button" id="confirmLocationPermissionBtn">Compartir ubicación</button>
-          <button class="permission-secondary" type="button" id="cancelLocationPermissionBtn">Ahora no</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="toast" class="toast"></div>
-  </main>
-
-  <script>
-    const searchBtn = document.getElementById("searchBtn");
-    const resultsContainer = document.getElementById("results");
-    const summary = document.getElementById("summary");
-    const debugStatus = document.getElementById("debugStatus");
-    const modeTabs = document.getElementById("modeTabs");
-    const toast = document.getElementById("toast");
-    const originInput = document.getElementById("origin");
-    const destinationInput = document.getElementById("destination");
-    const originSuggestions = document.getElementById("originSuggestions");
-    const destinationSuggestions = document.getElementById("destinationSuggestions");
-    const useLocationBtn = document.getElementById("useLocationBtn");
-    const locationPermissionModal = document.getElementById("locationPermissionModal");
-    const confirmLocationPermissionBtn = document.getElementById("confirmLocationPermissionBtn");
-    const cancelLocationPermissionBtn = document.getElementById("cancelLocationPermissionBtn");
-
-    const autocompleteTimers = { origin: null, destination: null };
-    const selectedPlaces = { origin: null, destination: null };
-    let currentOrigin = null;
-    let currentDestination = null;
-
-    function formatARS(value) {
-      return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(value);
-    }
-
-    function escapeHTML(text) {
-      return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
-    }
-
-    function setStatus(message, isError = false) {
-      if (!debugStatus) return;
-      debugStatus.textContent = message || "";
-      debugStatus.classList.toggle("active", Boolean(message));
-      debugStatus.classList.toggle("error", Boolean(isError));
-    }
-
-    function showToast(message, duration = 2400) {
-      if (!toast) return;
-      toast.textContent = message;
-      toast.classList.add("active");
-      clearTimeout(showToast.timeout);
-      showToast.timeout = setTimeout(function() {
-        toast.classList.remove("active");
-      }, duration);
-    }
-
-    function getBackendBaseUrl() {
-      if (window.location.protocol === "http:" || window.location.protocol === "https:") return window.location.origin;
-      return "http://192.168.1.36:3000";
-    }
-
-    function getPlatformMeta(appName) {
-      const name = String(appName || "").toLowerCase();
-      if (name.includes("uber")) return { logo: "U", className: "uber" };
-      if (name.includes("cabify")) return { logo: "C", className: "cabify" };
-      if (name.includes("didi")) return { logo: "D", className: "didi" };
-      if (name.includes("sube")) return { logo: "S", className: "sube" };
-      if (name.includes("google")) return { logo: "G", className: "maps" };
-      return { logo: "?", className: "" };
-    }
-
-    function getShortName(place) {
-      if (place.name) return place.name;
-      if (place.address) return place.address.road || place.address.neighbourhood || place.address.suburb || place.address.city || place.address.town || place.address.village || "Dirección encontrada";
-      return "Dirección encontrada";
-    }
-
-    function normalizePlaceForTravel(place, fallbackName = "Dirección") {
-      return {
-        lat: Number(place.lat),
-        lng: Number(place.lng ?? place.lon),
-        name: place.name || place.displayName || fallbackName,
-        displayName: place.displayName || place.name || fallbackName,
-        isCurrentLocation: Boolean(place.isCurrentLocation)
-      };
-    }
-
-    function saveCurrentPlace(type, place) {
-      const normalized = normalizePlaceForTravel(place, type === "origin" ? "Origen" : "Destino");
-      if (type === "origin") currentOrigin = normalized;
-      if (type === "destination") currentDestination = normalized;
-      return normalized;
-    }
-
-    function buildGoogleMapsRouteUrl(origin, destination, travelMode = "driving") {
-      return `https://www.google.com/maps/dir/?api=1` +
-        `&origin=${encodeURIComponent(`${origin.lat},${origin.lng}`)}` +
-        `&destination=${encodeURIComponent(`${destination.lat},${destination.lng}`)}` +
-        `&travelmode=${encodeURIComponent(travelMode)}`;
-    }
-
-    function hideSuggestions(listElement) {
-      listElement.classList.remove("active");
-      listElement.innerHTML = "";
-    }
-
-    function hideAllSuggestions() {
-      hideSuggestions(originSuggestions);
-      hideSuggestions(destinationSuggestions);
-    }
-
-    async function fetchAddressSuggestions(query) {
-      const url = new URL("https://nominatim.openstreetmap.org/search");
-      url.searchParams.set("q", query);
-      url.searchParams.set("format", "json");
-      url.searchParams.set("limit", "5");
-      url.searchParams.set("addressdetails", "1");
-      url.searchParams.set("accept-language", "es");
-      url.searchParams.set("countrycodes", "ar");
-      const response = await fetch(url.toString(), { method: "GET", headers: { "Accept": "application/json" } });
-      if (!response.ok) throw new Error("No se pudieron cargar las sugerencias.");
-      return await response.json();
-    }
-
-    function renderSuggestions(listElement, places, inputElement, type) {
-      listElement.innerHTML = "";
-      if (!places || places.length === 0) {
-        const emptyItem = document.createElement("li");
-        emptyItem.className = "suggestion-empty";
-        emptyItem.textContent = "No encontramos sugerencias. Probá con una dirección más específica.";
-        listElement.appendChild(emptyItem);
-        listElement.classList.add("active");
-        return;
-      }
-      places.forEach((place) => {
-        const item = document.createElement("li");
-        item.tabIndex = 0;
-        const title = document.createElement("div");
-        title.className = "suggestion-title";
-        title.textContent = getShortName(place);
-        const detail = document.createElement("div");
-        detail.className = "suggestion-detail";
-        detail.textContent = place.display_name;
-        item.appendChild(title);
-        item.appendChild(detail);
-
-        function selectPlace(event) {
-          event.preventDefault();
-          const selectedPlace = {
-            lat: parseFloat(place.lat),
-            lon: parseFloat(place.lon),
-            lng: parseFloat(place.lon),
-            name: getShortName(place),
-            displayName: place.display_name
-          };
-          inputElement.value = place.display_name;
-          selectedPlaces[type] = selectedPlace;
-          saveCurrentPlace(type, selectedPlace);
-          hideSuggestions(listElement);
-        }
-
-        item.addEventListener("mousedown", selectPlace);
-        item.addEventListener("keydown", function(event) {
-          if (event.key === "Enter") {
-            selectPlace(event);
-            inputElement.focus();
-          }
-        });
-        listElement.appendChild(item);
-      });
-      listElement.classList.add("active");
-    }
-
-    function setupAutocomplete(inputElement, listElement, type) {
-      inputElement.addEventListener("input", function() {
-        const query = inputElement.value.trim();
-        selectedPlaces[type] = null;
-        if (type === "origin") currentOrigin = null;
-        if (type === "destination") currentDestination = null;
-        clearTimeout(autocompleteTimers[type]);
-        if (query.length <= 3) {
-          hideSuggestions(listElement);
-          return;
-        }
-        autocompleteTimers[type] = setTimeout(async function() {
-          try {
-            const places = await fetchAddressSuggestions(query);
-            renderSuggestions(listElement, places, inputElement, type);
-          } catch (error) {
-            hideSuggestions(listElement);
-          }
-        }, 400);
-      });
-      inputElement.addEventListener("focus", function() {
-        const query = inputElement.value.trim();
-        if (query.length > 3 && listElement.children.length > 0) listElement.classList.add("active");
-      });
-    }
-
-    async function geocodeAddress(address, label) {
-      const url = new URL("https://nominatim.openstreetmap.org/search");
-      url.searchParams.set("q", address);
-      url.searchParams.set("format", "json");
-      url.searchParams.set("limit", "1");
-      url.searchParams.set("addressdetails", "1");
-      url.searchParams.set("accept-language", "es");
-      url.searchParams.set("countrycodes", "ar");
-      const response = await fetch(url.toString(), { method: "GET", headers: { "Accept": "application/json" } });
-      if (!response.ok) throw new Error("No se pudo conectar con el servicio de búsqueda de direcciones.");
-      const data = await response.json();
-      if (!data || data.length === 0) throw new Error(`No se pudo encontrar la dirección de ${label}. Probá escribiendo una dirección más específica.`);
-      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), lng: parseFloat(data[0].lon), name: getShortName(data[0]), displayName: data[0].display_name };
-    }
-
-    async function resolvePlace(type, address, label) {
-      const selectedPlace = selectedPlaces[type];
-      if (selectedPlace && selectedPlace.displayName === address) return selectedPlace;
-      const place = await geocodeAddress(address, label);
-      selectedPlaces[type] = place;
-      saveCurrentPlace(type, place);
-      return place;
-    }
-
-    function getSectionMinPrice(section) {
-      const first = (section.items || [])[0];
-      return first ? `desde ${formatARS(first.price_min)}` : "";
-    }
-
-    function renderModeTabs(sections) {
-      modeTabs.innerHTML = sections.map((section) => `
-        <a href="#section-${escapeHTML(section.id)}" class="mode-tab">
-          ${escapeHTML(section.icon || "")} ${escapeHTML(section.title)}
-          <span>${escapeHTML(getSectionMinPrice(section))}</span>
-        </a>
-      `).join("");
-      modeTabs.classList.add("active");
-    }
-
-    function renderSummary(data, origin, destination) {
-      const route = data.route || {};
-      const context = data.context || {};
-      const factors = context.factors || [];
-      summary.style.display = "block";
-      summary.innerHTML = `
-        Ruta: <strong>${escapeHTML(origin)}</strong> → <strong>${escapeHTML(destination)}</strong><br />
-        Distancia: <strong>${route.distance_km || "?"} km</strong> ·
-        Duración: <strong>${route.duration_min || "?"} min</strong> ·
-        Fuente: <strong>${escapeHTML(route.source || "sin dato")}</strong>
-        <div class="chips">
-          <span class="chip">Demanda: ${escapeHTML(context.demandLevel || "normal")}</span>
-          <span class="chip">Multiplicador: ${escapeHTML(context.multiplier || 1)}x</span>
-          ${factors.length ? factors.map((factor) => `<span class="chip">${escapeHTML(factor)}</span>`).join("") : `<span class="chip">sin factores extra</span>`}
-        </div>
-      `;
-    }
-
-    function renderResults(data, origin, destination, originCoords, destinationCoords) {
-      currentOrigin = saveCurrentPlace("origin", { ...originCoords, name: originCoords.name || originCoords.displayName || origin });
-      currentDestination = saveCurrentPlace("destination", { ...destinationCoords, name: destinationCoords.name || destinationCoords.displayName || destination });
-      renderSummary(data, origin, destination);
-      const sections = data.sections || [];
-      if (!sections.length) {
-        modeTabs.classList.remove("active");
-        resultsContainer.innerHTML = `<div class="empty-state"><strong>No encontramos opciones</strong><br />Probá otra ruta o intentá nuevamente.</div>`;
-        return;
-      }
-      renderModeTabs(sections);
-      resultsContainer.className = "sections";
-      resultsContainer.innerHTML = sections.map((section) => {
-        const cards = (section.items || []).map((item, index) => {
-          const meta = getPlatformMeta(item.app);
-          const integration = item.integration ? `<span class="chip">${escapeHTML(item.integration)}</span>` : "";
-          return `
-            <article class="card ${index === 0 ? "best" : ""}">
-              <span class="badge">Más barato</span>
-              <div class="brand">
-                <div class="brand-logo ${meta.className}">${escapeHTML(meta.logo)}</div>
-                <div>
-                  <h3>${escapeHTML(item.icon || "")} ${escapeHTML(item.product || item.app)}</h3>
-                  <p>${escapeHTML(item.app || "")}</p>
-                </div>
-              </div>
-              <div class="price">${formatARS(item.price_min)} - ${formatARS(item.price_max)}</div>
-              <div class="meta">${item.duration_min ? `${item.duration_min} min` : ""}${item.distance_km ? ` · ${item.distance_km} km` : ""}</div>
-              <p class="detail">${escapeHTML(item.description || "Precio estimado por Remo.")}</p>
-              <div class="chips"><span class="chip">Confianza: ${escapeHTML(item.confidence || "media")}</span>${integration}</div>
-              <button class="travel-btn" type="button" data-action="${escapeHTML(item.action)}" data-app="${escapeHTML(item.app)}" data-product="${escapeHTML(item.product)}">
-                ${item.action === "google_maps_transit" ? "Ver en Maps" : item.action === "cabify_app" ? "Copiar destino y abrir" : item.action === "didi_or_maps" ? "Copiar destino y abrir" : "Viajar"}
-              </button>
-              <button class="secondary-btn" type="button" data-secondary="maps">Abrir Maps</button>
-            </article>
-          `;
-        }).join("");
-        return `
-          <section class="category-section" id="section-${escapeHTML(section.id)}">
-            <div class="section-header">
-              <div class="section-title">
-                <div class="section-icon">${escapeHTML(section.icon || "")}</div>
-                <div><h2>${escapeHTML(section.title)}</h2><p>${escapeHTML(section.subtitle || "")}</p></div>
-              </div>
-              <div class="scroll-hint">Deslizá →</div>
-            </div>
-            <div class="cards-row">${cards}</div>
-          </section>
-        `;
-      }).join("") + `<div class="disclaimer">Los valores son rangos estimados por Remo. Confirmá precio final, disponibilidad, producto exacto y tiempos de espera en la app destino.</div>`;
-      resultsContainer.querySelectorAll(".travel-btn").forEach((button) => {
-        button.addEventListener("click", function() { travel(button.dataset.action, button.dataset.app, button.dataset.product); });
-      });
-      resultsContainer.querySelectorAll("[data-secondary='maps']").forEach((button) => {
-        button.addEventListener("click", function() { window.location.href = buildGoogleMapsRouteUrl(currentOrigin, currentDestination, "driving"); });
-      });
-    }
-
-    function openWithFallback(appUrl, fallbackUrl, timeoutMs = 2000) {
-      let appOpened = false;
-      function markAsOpened() { appOpened = true; cleanup(); }
-      function handleVisibilityChange() { if (document.hidden) markAsOpened(); }
-      function cleanup() {
-        window.removeEventListener("blur", markAsOpened);
-        window.removeEventListener("pagehide", markAsOpened);
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
-      }
-      window.addEventListener("blur", markAsOpened);
-      window.addEventListener("pagehide", markAsOpened);
-      document.addEventListener("visibilitychange", handleVisibilityChange);
-      window.location.href = appUrl;
-      setTimeout(function() {
-        cleanup();
-        if (!appOpened && !document.hidden && fallbackUrl) window.location.href = fallbackUrl;
-      }, timeoutMs);
-    }
-
-    function buildUberV2Url() {
-      const originLat = encodeURIComponent(currentOrigin.lat);
-      const originLng = encodeURIComponent(currentOrigin.lng);
-      const originName = encodeURIComponent(currentOrigin.name || "Origen");
-      const originAddress = encodeURIComponent(currentOrigin.displayName || currentOrigin.name || "Origen");
-      const destinationLat = encodeURIComponent(currentDestination.lat);
-      const destinationLng = encodeURIComponent(currentDestination.lng);
-      const destinationName = encodeURIComponent(currentDestination.name || "Destino");
-      const destinationAddress = encodeURIComponent(currentDestination.displayName || currentDestination.name || "Destino");
-      return `uber://riderequest?pickup[latitude]=${originLat}&pickup[longitude]=${originLng}&pickup[nickname]=${originName}&pickup[formatted_address]=${originAddress}&dropoff[latitude]=${destinationLat}&dropoff[longitude]=${destinationLng}&dropoff[nickname]=${destinationName}&dropoff[formatted_address]=${destinationAddress}`;
-    }
-
-    function getDestinationTextForClipboard() {
-      const typedDestination = destinationInput.value.trim();
-
-      if (typedDestination) {
-        return typedDestination;
-      }
-
-      if (!currentDestination) {
-        return "";
-      }
-
-      return currentDestination.displayName || currentDestination.name || "Destino seleccionado";
-    }
-
-    function isUsingCurrentLocationOrigin() {
-      return Boolean(currentOrigin?.isCurrentLocation) ||
-        String(originInput.value || "").toLowerCase().includes("mi ubicación actual");
-    }
-
-    function getOriginAndDestinationTextForClipboard() {
-      const originText = currentOrigin?.displayName || currentOrigin?.name || "Origen seleccionado";
-      const destinationText = currentDestination?.displayName || currentDestination?.name || "Destino seleccionado";
-      return `Origen: ${originText}
-Destino: ${destinationText}`;
-    }
-
-    async function copyTextBestEffort(textToCopy, successMessage, fallbackMessage) {
-      try {
-        await navigator.clipboard.writeText(textToCopy);
-        showToast(successMessage);
-        return true;
-      } catch (error) {
-        console.warn("No se pudo copiar al portapapeles:", error);
-        showToast(fallbackMessage || textToCopy, 4200);
-        return false;
-      }
-    }
-
-    async function travelCabify() {
-      if (!currentOrigin || !currentDestination) {
-        alert("Primero buscá una ruta para poder viajar.");
-        return;
-      }
-
-      const destinationText = getDestinationTextForClipboard();
-      const originHint = isUsingCurrentLocationOrigin()
-        ? "Cabify usará tu ubicación actual como origen."
-        : "Tip: para Cabify conviene usar “mi ubicación actual” como origen.";
-
-      await copyTextBestEffort(
-        destinationText,
-        `Destino copiado ✅ ${originHint}`,
-        `No pudimos copiar. Destino: ${destinationText}`
-      );
-
-      setTimeout(function() {
-        const playStoreUrl = "https://play.google.com/store/apps/details?id=com.cabify.rider";
-        const cabifyIntent =
-          "intent://#Intent;" +
-          "scheme=cabify;" +
-          "package=com.cabify.rider;" +
-          "S.browser_fallback_url=" +
-          encodeURIComponent(playStoreUrl) +
-          ";end";
-
-        window.location.href = cabifyIntent;
-      }, 850);
-    }
-
-    async function travelDidi() {
-      if (!currentOrigin || !currentDestination) {
-        alert("Primero buscá una ruta para poder viajar.");
-        return;
-      }
-
-      const routeText = getOriginAndDestinationTextForClipboard();
-      await copyTextBestEffort(
-        routeText,
-        "Ruta copiada ✅ Si DiDi no carga, pegá destino manualmente.",
-        `No pudimos copiar. ${routeText}`
-      );
-
-      setTimeout(function() {
-        const googleMapsDrivingUrl = buildGoogleMapsRouteUrl(currentOrigin, currentDestination, "driving");
-        const didiUrl = `didipas://passenger/order?from_lat=${encodeURIComponent(currentOrigin.lat)}&from_lng=${encodeURIComponent(currentOrigin.lng)}&to_lat=${encodeURIComponent(currentDestination.lat)}&to_lng=${encodeURIComponent(currentDestination.lng)}`;
-        openWithFallback(didiUrl, googleMapsDrivingUrl, 1600);
-      }, 850);
-    }
-
-    function travel(action, appName, productName) {
-      if (!currentOrigin || !currentDestination) {
-        alert("Primero buscá una ruta para poder viajar.");
-        return;
-      }
-      const googleMapsDrivingUrl = buildGoogleMapsRouteUrl(currentOrigin, currentDestination, "driving");
-      if (action === "uber_v2") {
-        openWithFallback(buildUberV2Url(), googleMapsDrivingUrl, 2200);
-        return;
-      }
-      if (action === "cabify_app") {
-        travelCabify();
-        return;
-      }
-      if (action === "didi_or_maps") {
-        travelDidi();
-        return;
-      }
-      if (action === "google_maps_transit") {
-        window.location.href = buildGoogleMapsRouteUrl(currentOrigin, currentDestination, "transit");
-        return;
-      }
-      window.location.href = googleMapsDrivingUrl;
-    }
-
-    function testDeepLink(platformName) {
-      currentOrigin = { lat: -34.6037345, lng: -58.3815704, name: "Obelisco", displayName: "Obelisco, Avenida Corrientes, Buenos Aires, Argentina" };
-      currentDestination = { lat: -34.5580307, lng: -58.4170085, name: "Aeroparque", displayName: "Aeroparque Internacional Jorge Newbery, Buenos Aires, Argentina" };
-      if (platformName === "Uber") travel("uber_v2", "Uber", "UberX");
-      if (platformName === "Cabify") travel("cabify_app", "Cabify", "Cabify");
-      if (platformName === "DiDi") travel("didi_or_maps", "DiDi", "DiDi Auto");
-    }
-
-
-    function reverseGeocodeCurrentLocation(lat, lng) {
-      const url = new URL("https://nominatim.openstreetmap.org/reverse");
-      url.searchParams.set("lat", lat);
-      url.searchParams.set("lon", lng);
-      url.searchParams.set("format", "json");
-      url.searchParams.set("addressdetails", "1");
-      url.searchParams.set("accept-language", "es");
-
-      return fetch(url.toString(), {
-        method: "GET",
-        headers: { "Accept": "application/json" }
-      }).then(function(response) {
-        if (!response.ok) {
-          throw new Error("No se pudo leer la dirección actual.");
-        }
-        return response.json();
-      });
-    }
-
-
-    function openLocationPermissionModal() {
-      if (!navigator.geolocation) {
-        alert("Tu navegador no permite obtener ubicación actual.");
-        return;
-      }
-
-      if (locationPermissionModal) {
-        locationPermissionModal.classList.add("active");
-      } else {
-        useCurrentLocationAsOrigin();
-      }
-    }
-
-    function closeLocationPermissionModal() {
-      if (locationPermissionModal) {
-        locationPermissionModal.classList.remove("active");
-      }
-    }
-
-    async function useCurrentLocationAsOrigin() {
-      if (!navigator.geolocation) {
-        alert("Tu navegador no permite obtener ubicación actual.");
-        return;
-      }
-
-      useLocationBtn.disabled = true;
-      useLocationBtn.textContent = "Buscando ubicación...";
-      setStatus("Pidiendo permiso de ubicación al navegador...");
-
-      navigator.geolocation.getCurrentPosition(async function(position) {
-        try {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          const accuracy = Math.round(position.coords.accuracy || 0);
-
-          let displayName = `Mi ubicación actual (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
-          let shortName = "Mi ubicación actual";
-
-          try {
-            const reverseData = await reverseGeocodeCurrentLocation(lat, lng);
-            if (reverseData && reverseData.display_name) {
-              displayName = reverseData.display_name;
-              shortName = getShortName(reverseData) || "Mi ubicación actual";
-            }
-          } catch (reverseError) {
-            console.warn("No se pudo hacer reverse geocoding:", reverseError);
-          }
-
-          const currentPlace = {
-            lat,
-            lon: lng,
-            lng,
-            name: shortName,
-            displayName,
-            isCurrentLocation: true
-          };
-
-          selectedPlaces.origin = currentPlace;
-          saveCurrentPlace("origin", currentPlace);
-          originInput.value = displayName;
-          hideSuggestions(originSuggestions);
-
-          setStatus(`Ubicación actual cargada como origen. Precisión aproximada: ${accuracy} m.`);
-          showToast("Ubicación actual cargada como origen ✅");
-        } catch (error) {
-          console.error(error);
-          setStatus("No pudimos convertir tu ubicación en una dirección. Probá escribiendo el origen manualmente.", true);
-        } finally {
-          useLocationBtn.disabled = false;
-          useLocationBtn.textContent = "📍 Usar mi ubicación actual";
-        }
-      }, function(error) {
-        console.warn("Error geolocation:", error);
-
-        let message = "No pudimos acceder a tu ubicación.";
-
-        if (error.code === 1) {
-          message = "Permiso de ubicación denegado. Activá el permiso del navegador para Remo.";
-        }
-
-        if (error.code === 2) {
-          message = "No se pudo determinar tu ubicación. Verificá GPS/Wi‑Fi.";
-        }
-
-        if (error.code === 3) {
-          message = "La búsqueda de ubicación tardó demasiado. Probá de nuevo.";
-        }
-
-        setStatus(message, true);
-        alert(message);
-        useLocationBtn.disabled = false;
-        useLocationBtn.textContent = "📍 Usar mi ubicación actual";
-      }, {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 30000
-      });
-    }
-
-
-    async function handleSearch() {
-      const origin = originInput.value.trim();
-      const destination = destinationInput.value.trim();
-      if (!origin || !destination) {
-        alert("Completá el origen y el destino para buscar.");
-        return;
-      }
-      hideAllSuggestions();
-      searchBtn.disabled = true;
-      searchBtn.textContent = "Buscando...";
-      setStatus("Resolviendo direcciones, clima, distancia y opciones...");
-      try {
-        const originCoords = await resolvePlace("origin", origin, "origen");
-        const destinationCoords = await resolvePlace("destination", destination, "destino");
-        const optionsUrl = `${getBackendBaseUrl()}/api/options?start_lat=${encodeURIComponent(originCoords.lat)}&start_lng=${encodeURIComponent(originCoords.lng ?? originCoords.lon)}&end_lat=${encodeURIComponent(destinationCoords.lat)}&end_lng=${encodeURIComponent(destinationCoords.lng ?? destinationCoords.lon)}`;
-        const response = await fetch(optionsUrl, { method: "GET", headers: { "Accept": "application/json" } });
-        let data = null;
-        try { data = await response.json(); } catch (jsonError) { throw new Error("El backend respondió, pero no devolvió JSON válido."); }
-        if (!response.ok) throw new Error(data.message || "No se pudieron obtener opciones desde el backend de Remo.");
-        renderResults(data, origin, destination, originCoords, destinationCoords);
-        setStatus("Listo: opciones calculadas por sección.");
-      } catch (error) {
-        console.error("Error en handleSearch:", error);
-        setStatus(error.message || "Ocurrió un problema al buscar el viaje.", true);
-        alert(error.message || "Ocurrió un problema al buscar el viaje. Probá nuevamente.");
-      } finally {
-        searchBtn.disabled = false;
-        searchBtn.textContent = "Buscar";
-      }
-    }
-
-    setupAutocomplete(originInput, originSuggestions, "origin");
-    setupAutocomplete(destinationInput, destinationSuggestions, "destination");
-    if (useLocationBtn) {
-      useLocationBtn.addEventListener("click", openLocationPermissionModal);
-    }
-
-    if (confirmLocationPermissionBtn) {
-      confirmLocationPermissionBtn.addEventListener("click", function() {
-        closeLocationPermissionModal();
-        useCurrentLocationAsOrigin();
-      });
-    }
-
-    if (cancelLocationPermissionBtn) {
-      cancelLocationPermissionBtn.addEventListener("click", closeLocationPermissionModal);
-    }
-
-    if (locationPermissionModal) {
-      locationPermissionModal.addEventListener("click", function(event) {
-        if (event.target === locationPermissionModal) {
-          closeLocationPermissionModal();
-        }
-      });
-    }
-
-    searchBtn.addEventListener("click", handleSearch);
-    document.addEventListener("keydown", function(event) {
-      if (event.key === "Enter") {
-        const activeElement = document.activeElement;
-        const isSuggestion = activeElement && activeElement.closest && activeElement.closest(".suggestions");
-        if (!isSuggestion) handleSearch();
-      }
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import path from "path";
+import os from "os";
+import { fileURLToPath } from "url";
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const publicPath = __dirname;
+
+app.use(cors({ origin: "*" }));
+app.use(express.json());
+app.use(express.static(publicPath));
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", message: "Servidor de Remo funcionando correctamente" });
+});
+
+function isValidCoordinate(value) {
+  return value !== undefined && value !== null && value !== "" && Number.isFinite(Number(value));
+}
+
+function validateLatitude(lat) {
+  const number = Number(lat);
+  return number >= -90 && number <= 90;
+}
+
+function validateLongitude(lng) {
+  const number = Number(lng);
+  return number >= -180 && number <= 180;
+}
+
+function toRadians(value) {
+  return value * Math.PI / 180;
+}
+
+function roundToNearest(value, step = 50) {
+  return Math.round(value / step) * step;
+}
+
+function calculateHaversineKm(originLat, originLng, destinationLat, destinationLng) {
+  const earthRadiusKm = 6371;
+  const deltaLat = toRadians(destinationLat - originLat);
+  const deltaLng = toRadians(destinationLng - originLng);
+  const lat1 = toRadians(originLat);
+  const lat2 = toRadians(destinationLat);
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) *
+    Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadiusKm * c;
+}
+
+function getBuenosAiresTime(date = new Date()) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+  const parts = formatter.formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value || 0);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value || 0);
+  const weekday = parts.find((part) => part.type === "weekday")?.value || "";
+  const isWeekend = weekday === "Sat" || weekday === "Sun";
+  return {
+    hour,
+    minute,
+    weekday,
+    isWeekend,
+    isPeakHour: (hour >= 7 && hour < 10) || (hour >= 17 && hour < 21),
+    isNight: hour >= 22 || hour < 6,
+    isWeekendNight: isWeekend && (hour >= 20 || hour < 6)
+  };
+}
+
+function isNearPoint(lat, lng, targetLat, targetLng, radiusKm) {
+  return calculateHaversineKm(lat, lng, targetLat, targetLng) <= radiusKm;
+}
+
+function buildAirportContext(originLat, originLng, destinationLat, destinationLng) {
+  const airports = [
+    { name: "Aeroparque Jorge Newbery", lat: -34.5580307, lng: -58.4170085, radiusKm: 2.5 },
+    { name: "Ezeiza", lat: -34.822222, lng: -58.535833, radiusKm: 4 }
+  ];
+
+  const matchedAirport = airports.find((airport) => {
+    return isNearPoint(originLat, originLng, airport.lat, airport.lng, airport.radiusKm) ||
+      isNearPoint(destinationLat, destinationLng, airport.lat, airport.lng, airport.radiusKm);
+  });
+
+  return { isAirportRoute: Boolean(matchedAirport), airportName: matchedAirport?.name || null };
+}
+
+async function fetchJsonWithTimeout(url, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Accept": "application/json", "User-Agent": "Remo MVP local development" },
+      signal: controller.signal
     });
-    document.addEventListener("click", function(event) {
-      const clickedInsideField = event.target.closest(".field");
-      if (!clickedInsideField) hideAllSuggestions();
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function getWeatherContext(lat, lng) {
+  const url =
+    `https://api.open-meteo.com/v1/forecast` +
+    `?latitude=${encodeURIComponent(lat)}` +
+    `&longitude=${encodeURIComponent(lng)}` +
+    `&current=temperature_2m,precipitation,rain,weather_code,wind_speed_10m` +
+    `&timezone=America%2FArgentina%2FBuenos_Aires`;
+  try {
+    const data = await fetchJsonWithTimeout(url, 5000);
+    const current = data.current || {};
+    const precipitation = Number(current.precipitation || 0);
+    const rain = Number(current.rain || 0);
+    const weatherCode = Number(current.weather_code || 0);
+    const windSpeed = Number(current.wind_speed_10m || 0);
+    const isRaining = precipitation > 0 || rain > 0;
+    const isStorm = [95, 96, 99].includes(weatherCode);
+    return {
+      available: true,
+      temperature: Number(current.temperature_2m || 0),
+      precipitation,
+      rain,
+      weatherCode,
+      windSpeed,
+      isRaining,
+      isStorm,
+      isBadWeather: isRaining || isStorm || windSpeed >= 35
+    };
+  } catch (error) {
+    console.warn("No se pudo consultar clima:", error.message);
+    return {
+      available: false,
+      temperature: null,
+      precipitation: 0,
+      rain: 0,
+      weatherCode: null,
+      windSpeed: null,
+      isRaining: false,
+      isStorm: false,
+      isBadWeather: false
+    };
+  }
+}
+
+function estimateDurationFallback(distanceKm, timeContext) {
+  let averageSpeedKmh = 18;
+  if (timeContext.isPeakHour) averageSpeedKmh = 13;
+  if (timeContext.isNight) averageSpeedKmh = 24;
+  return Math.max(4, (distanceKm / averageSpeedKmh) * 60);
+}
+
+async function getDrivingRouteInfo(originLat, originLng, destinationLat, destinationLng, timeContext) {
+  const coordinates = `${originLng},${originLat};${destinationLng},${destinationLat}`;
+  const osrmServers = [
+    { name: "OSRM demo router.project-osrm.org", url: `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=false&alternatives=false&steps=false` },
+    { name: "OSRM FOSSGIS routing.openstreetmap.de", url: `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordinates}?overview=false&alternatives=false&steps=false` }
+  ];
+
+  for (const server of osrmServers) {
+    try {
+      const data = await fetchJsonWithTimeout(server.url, 8000);
+      if (!data || data.code !== "Ok" || !data.routes || !data.routes[0]) {
+        throw new Error(`Respuesta invalida: ${data?.code || "sin codigo"}`);
+      }
+      const route = data.routes[0];
+      const distanceKm = route.distance / 1000;
+      const durationMin = Number.isFinite(route.duration)
+        ? Math.max(4, route.duration / 60)
+        : estimateDurationFallback(distanceKm, timeContext);
+      return { distanceKm, durationMin, source: server.name, fallback: false };
+    } catch (error) {
+      console.warn(`Fallo ${server.name}:`, error.message);
+    }
+  }
+
+  const straightLineKm = calculateHaversineKm(originLat, originLng, destinationLat, destinationLng);
+  const distanceKm = straightLineKm * 1.35;
+  return {
+    distanceKm,
+    durationMin: estimateDurationFallback(distanceKm, timeContext),
+    source: "Fallback local Haversine x 1.35",
+    fallback: true
+  };
+}
+
+function buildPricingContext(timeContext, weatherContext, airportContext) {
+  const factors = [];
+  let multiplier = 1;
+
+  if (timeContext.isPeakHour) { multiplier *= 1.10; factors.push("hora pico"); }
+  if (timeContext.isNight) { multiplier *= 1.08; factors.push("horario nocturno"); }
+  if (timeContext.isWeekendNight) { multiplier *= 1.08; factors.push("fin de semana/noche"); }
+  if (weatherContext.isRaining) { multiplier *= 1.12; factors.push("lluvia"); }
+  if (weatherContext.isStorm) { multiplier *= 1.18; factors.push("tormenta"); }
+  if (airportContext.isAirportRoute) {
+    multiplier *= 1.05;
+    factors.push(`zona aeropuerto${airportContext.airportName ? ` (${airportContext.airportName})` : ""}`);
+  }
+
+  const cappedMultiplier = Math.min(multiplier, 1.65);
+  let demandLevel = "normal";
+  if (cappedMultiplier >= 1.30) demandLevel = "alta";
+  else if (cappedMultiplier >= 1.10) demandLevel = "media";
+
+  return {
+    multiplier: Number(cappedMultiplier.toFixed(2)),
+    demandLevel,
+    factors,
+    time: timeContext,
+    weather: weatherContext,
+    airport: airportContext
+  };
+}
+
+const PUBLIC_TRANSPORT_FARES = {
+  busMin: 820.6,
+  busMax: 1059.28,
+  subwayRegistered: 1621,
+  subwayUnregistered: 2541.1,
+  trainMin: 520,
+  trainMax: 950
+};
+
+const PRODUCT_CONFIG = {
+  auto: [
+    { app: "Uber", product: "UberX", icon: "🚗", action: "uber_v2", integration: "Ruta validada en Android", base: 1450, perKm: 520, perMin: 95, min: 3200, rangeNormal: 900, rangeMedium: 1100, rangeHigh: 1300, appMultiplier: 1.0 },
+    { app: "Uber", product: "Comfort", icon: "🚘", action: "uber_v2", integration: "Ruta validada en Android", base: 2100, perKm: 600, perMin: 115, min: 4200, rangeNormal: 1000, rangeMedium: 1200, rangeHigh: 1400, appMultiplier: 1.0 },
+    { app: "Cabify", product: "Cabify", icon: "🚙", action: "cabify_app", integration: "Abre app; ruta no validada", base: 1700, perKm: 540, perMin: 100, min: 3500, rangeNormal: 1000, rangeMedium: 1300, rangeHigh: 1500, appMultiplier: 1.0 },
+    { app: "DiDi", product: "DiDi Auto", icon: "🚗", action: "didi_or_maps", integration: "Fallback a Maps si falla", base: 1300, perKm: 480, perMin: 88, min: 3000, rangeNormal: 1000, rangeMedium: 1300, rangeHigh: 1500, appMultiplier: 0.98 }
+  ],
+  moto: [
+    { app: "Uber", product: "Moto", icon: "🏍️", action: "uber_v2", integration: "Ruta validada via Uber", base: 900, perKm: 430, perMin: 70, min: 2400, rangeNormal: 700, rangeMedium: 900, rangeHigh: 1100, appMultiplier: 1.0 },
+    { app: "DiDi", product: "DiDi Moto", icon: "🏍️", action: "didi_or_maps", integration: "No validado; fallback a Maps", base: 850, perKm: 390, perMin: 62, min: 2200, rangeNormal: 800, rangeMedium: 1000, rangeHigh: 1200, appMultiplier: 0.98 }
+  ],
+  envios: [
+    { app: "Uber", product: "Flash", icon: "📦", action: "uber_v2", integration: "Abre Uber; producto no preseleccionado", base: 1150, perKm: 430, perMin: 68, min: 2600, rangeNormal: 750, rangeMedium: 900, rangeHigh: 1100, appMultiplier: 1.0 },
+    { app: "Cabify", product: "Envios", icon: "⚡", action: "cabify_app", integration: "Abre app; producto no validado", base: 1350, perKm: 460, perMin: 72, min: 2800, rangeNormal: 850, rangeMedium: 1000, rangeHigh: 1200, appMultiplier: 1.0 },
+    { app: "DiDi", product: "Entrega", icon: "📦", action: "didi_or_maps", integration: "Fallback a Maps si falla", base: 1100, perKm: 410, perMin: 65, min: 2500, rangeNormal: 850, rangeMedium: 1000, rangeHigh: 1200, appMultiplier: 0.98 }
+  ]
+};
+
+function getRangeWidth(productConfig, demandLevel) {
+  if (demandLevel === "alta") return productConfig.rangeHigh;
+  if (demandLevel === "media") return productConfig.rangeMedium;
+  return productConfig.rangeNormal;
+}
+
+function estimateProductPrice(productConfig, routeInfo, pricingContext) {
+  const rawPrice = productConfig.base + routeInfo.distanceKm * productConfig.perKm + routeInfo.durationMin * productConfig.perMin;
+  const contextualPrice = Math.max(productConfig.min, rawPrice * pricingContext.multiplier * productConfig.appMultiplier);
+  const center = roundToNearest(contextualPrice, 50);
+  const rangeWidth = getRangeWidth(productConfig, pricingContext.demandLevel);
+  const min = Math.max(productConfig.min, center - rangeWidth / 2);
+  const max = Math.max(min + 450, center + rangeWidth / 2);
+  return {
+    price: center,
+    price_min: roundToNearest(min, 50),
+    price_max: roundToNearest(max, 50),
+    range_width: roundToNearest(max - min, 50)
+  };
+}
+
+function createOption(productConfig, routeInfo, pricingContext) {
+  const estimate = estimateProductPrice(productConfig, routeInfo, pricingContext);
+  return {
+    app: productConfig.app,
+    name: productConfig.app,
+    product: productConfig.product,
+    icon: productConfig.icon,
+    action: productConfig.action,
+    integration: productConfig.integration,
+    price: estimate.price,
+    price_min: estimate.price_min,
+    price_max: estimate.price_max,
+    range_width: estimate.range_width,
+    currency: "ARS",
+    distance_km: Number(routeInfo.distanceKm.toFixed(2)),
+    duration_min: Number(routeInfo.durationMin.toFixed(0)),
+    confidence: pricingContext.demandLevel === "normal" ? "media" : "media-baja",
+    description: `Rango estimado por Remo para ${productConfig.product}. Confirma precio final en la app.`
+  };
+}
+
+
+function isPointInsideCaba(lat, lng) {
+  // Bounding box conservadora de CABA. No es geocerca perfecta, pero evita mostrar subte en rutas claramente fuera de CABA.
+  return lat >= -34.705 &&
+    lat <= -34.525 &&
+    lng >= -58.535 &&
+    lng <= -58.335;
+}
+
+function isRouteInsideCaba(origin, destination) {
+  if (!origin || !destination) {
+    return false;
+  }
+
+  return isPointInsideCaba(origin.lat, origin.lng) &&
+    isPointInsideCaba(destination.lat, destination.lng);
+}
+
+function createPublicTransportItems(routeInfo, origin, destination) {
+  const distanceKm = routeInfo.distanceKm;
+  const durationMin = routeInfo.durationMin;
+  const busSegments = distanceKm > 10 ? 2 : 1;
+  const needsCombination = distanceKm > 8;
+  const routeInsideCaba = isRouteInsideCaba(origin, destination);
+  const canSubwayHelp = routeInsideCaba && distanceKm >= 4 && distanceKm <= 16;
+  const canTrainHelp = distanceKm >= 9;
+  const busMin = PUBLIC_TRANSPORT_FARES.busMin * busSegments;
+  const busMax = PUBLIC_TRANSPORT_FARES.busMax * busSegments;
+
+  const items = [
+    {
+      app: "SUBE", name: "SUBE", product: busSegments === 1 ? "Colectivo" : "Colectivo x2", icon: "🚌",
+      action: "google_maps_transit", integration: "Abrir ruta en Google Maps",
+      price: roundToNearest((busMin + busMax) / 2, 10), price_min: roundToNearest(busMin, 10), price_max: roundToNearest(busMax, 10),
+      range_width: roundToNearest(busMax - busMin, 10), currency: "ARS", distance_km: Number(distanceKm.toFixed(2)),
+      duration_min: Math.round(durationMin * 1.7), confidence: "baja",
+      description: routeInsideCaba
+        ? "Estimacion SUBE en CABA. Las lineas exactas se confirman en Maps."
+        : "Estimacion SUBE. Fuera de CABA no mostramos subte; las lineas exactas se confirman en Maps."
+    }
+  ];
+
+  if (canSubwayHelp) {
+    const min = needsCombination ? PUBLIC_TRANSPORT_FARES.subwayRegistered + PUBLIC_TRANSPORT_FARES.busMin : PUBLIC_TRANSPORT_FARES.subwayRegistered;
+    const max = needsCombination ? PUBLIC_TRANSPORT_FARES.subwayUnregistered + PUBLIC_TRANSPORT_FARES.busMax : PUBLIC_TRANSPORT_FARES.subwayUnregistered;
+    items.push({
+      app: "SUBE", name: "SUBE", product: needsCombination ? "Colectivo + Subte" : "Subte", icon: "🚇",
+      action: "google_maps_transit", integration: "Abrir ruta en Google Maps",
+      price: roundToNearest((min + max) / 2, 10), price_min: roundToNearest(min, 10), price_max: roundToNearest(max, 10),
+      range_width: roundToNearest(max - min, 10), currency: "ARS", distance_km: Number(distanceKm.toFixed(2)),
+      duration_min: Math.round(durationMin * 1.55), confidence: "baja",
+      description: "Estimacion con subte. Confirma combinacion, horarios y caminata en Maps."
     });
-  </script>
-</body>
-</html>
+  }
+
+  if (canTrainHelp) {
+    const min = PUBLIC_TRANSPORT_FARES.trainMin + PUBLIC_TRANSPORT_FARES.busMin;
+    const max = PUBLIC_TRANSPORT_FARES.trainMax + PUBLIC_TRANSPORT_FARES.busMax;
+    items.push({
+      app: "SUBE", name: "SUBE", product: "Tren + Colectivo", icon: "🚆",
+      action: "google_maps_transit", integration: "Abrir ruta en Google Maps",
+      price: roundToNearest((min + max) / 2, 10), price_min: roundToNearest(min, 10), price_max: roundToNearest(max, 10),
+      range_width: roundToNearest(max - min, 10), currency: "ARS", distance_km: Number(distanceKm.toFixed(2)),
+      duration_min: Math.round(durationMin * 1.65), confidence: "baja",
+      description: "Estimacion con tren. La linea y frecuencia se validan en Maps."
+    });
+  }
+
+  return items.sort((a, b) => a.price_min - b.price_min);
+}
+
+function buildSections(routeInfo, pricingContext, origin, destination) {
+  return [
+    { id: "auto", title: "Auto", icon: "🚗", subtitle: "Precios estimados por app", items: PRODUCT_CONFIG.auto.map((product) => createOption(product, routeInfo, pricingContext)).sort((a, b) => a.price_min - b.price_min) },
+    { id: "moto", title: "Moto", icon: "🏍️", subtitle: "Opciones rapidas y economicas", items: PRODUCT_CONFIG.moto.map((product) => createOption(product, routeInfo, pricingContext)).sort((a, b) => a.price_min - b.price_min) },
+    { id: "envios", title: "Envios", icon: "📦", subtitle: "Paquetes, courier y mensajeria", items: PRODUCT_CONFIG.envios.map((product) => createOption(product, routeInfo, pricingContext)).sort((a, b) => a.price_min - b.price_min) },
+    { id: "public_transport", title: "Bus", icon: "🚌", subtitle: isRouteInsideCaba(origin, destination) ? "Colectivo, subte, tren y combinaciones" : "Colectivo, tren y combinaciones", items: createPublicTransportItems(routeInfo, origin, destination) }
+  ];
+}
+
+async function getRouteAndContext(req, res) {
+  const { start_lat, start_lng, end_lat, end_lng } = req.query;
+  if (!isValidCoordinate(start_lat) || !isValidCoordinate(start_lng) || !isValidCoordinate(end_lat) || !isValidCoordinate(end_lng)) {
+    res.status(400).json({ status: "error", message: "Faltan parametros o hay coordenadas invalidas.", required_params: ["start_lat", "start_lng", "end_lat", "end_lng"] });
+    return null;
+  }
+  if (!validateLatitude(start_lat) || !validateLatitude(end_lat) || !validateLongitude(start_lng) || !validateLongitude(end_lng)) {
+    res.status(400).json({ status: "error", message: "Las coordenadas estan fuera de rango." });
+    return null;
+  }
+
+  const originLat = Number(start_lat);
+  const originLng = Number(start_lng);
+  const destinationLat = Number(end_lat);
+  const destinationLng = Number(end_lng);
+  const timeContext = getBuenosAiresTime();
+  const [routeInfo, weatherContext] = await Promise.all([
+    getDrivingRouteInfo(originLat, originLng, destinationLat, destinationLng, timeContext),
+    getWeatherContext(originLat, originLng)
+  ]);
+  const airportContext = buildAirportContext(originLat, originLng, destinationLat, destinationLng);
+  const pricingContext = buildPricingContext(timeContext, weatherContext, airportContext);
+  return { origin: { lat: originLat, lng: originLng }, destination: { lat: destinationLat, lng: destinationLng }, routeInfo, pricingContext };
+}
+
+app.get("/api/options", async (req, res) => {
+  try {
+    const result = await getRouteAndContext(req, res);
+    if (!result) return;
+    const sections = buildSections(result.routeInfo, result.pricingContext, result.origin, result.destination);
+    res.json({
+      route: {
+        distance_km: Number(result.routeInfo.distanceKm.toFixed(2)),
+        duration_min: Number(result.routeInfo.durationMin.toFixed(0)),
+        source: result.routeInfo.source,
+        fallback: result.routeInfo.fallback
+      },
+      context: result.pricingContext,
+      sections
+    });
+  } catch (error) {
+    console.error("Error en /api/options:", error);
+    res.status(500).json({ status: "error", message: "No se pudieron calcular las opciones del viaje.", detail: error.message });
+  }
+});
+
+app.get("/api/prices", async (req, res) => {
+  try {
+    const result = await getRouteAndContext(req, res);
+    if (!result) return;
+    const sections = buildSections(result.routeInfo, result.pricingContext, result.origin, result.destination);
+    res.json(sections.find((section) => section.id === "auto")?.items || []);
+  } catch (error) {
+    console.error("Error en /api/prices:", error);
+    res.status(500).json({ status: "error", message: "No se pudo calcular el precio del viaje.", detail: error.message });
+  }
+});
+
+function getLocalNetworkUrls(port) {
+  const interfaces = os.networkInterfaces();
+  const urls = [];
+  Object.values(interfaces).forEach((networkInterface) => {
+    networkInterface?.forEach((details) => {
+      if (details.family === "IPv4" && !details.internal) urls.push(`http://${details.address}:${port}`);
+    });
+  });
+  return urls;
+}
+
+app.use((req, res) => {
+  res.sendFile(path.join(publicPath, "index.html"));
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Servidor de Remo corriendo en http://localhost:${PORT}`);
+  const localUrls = getLocalNetworkUrls(PORT);
+  if (localUrls.length > 0) {
+    console.log("Disponible desde el celular en:");
+    localUrls.forEach((url) => console.log(`- ${url}`));
+  } else {
+    console.log("No pude detectar IP de red local. Usa ipconfig para verla.");
+  }
+});
