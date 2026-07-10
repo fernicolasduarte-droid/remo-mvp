@@ -1,13 +1,17 @@
-# Remo MVP - versión simple para subir a GitHub
+# Remo MVP - actualización DiDi + ubicación precisa
 
-Esta versión está preparada para GitHub/Render sin carpetas.
-
-Subí estos archivos directamente a la raíz del repositorio:
+Archivos para subir a GitHub/Render:
 - package.json
 - server.js
 - index.html
+- didi-test.html
 - README.md
 
 Render:
 - Build Command: npm install
 - Start Command: npm start
+
+Cambios:
+- DiDi: fallback asistido, copia solo destino y abre app por intent launcher.
+- Ubicación: toma hasta 3 lecturas y usa la más precisa. Muestra precisión aproximada en metros.
+- didi-test.html: página aislada para probar variantes de DiDi.

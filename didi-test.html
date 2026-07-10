@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Remo - DiDi Test</title>
+<style>
+:root { --bg:#eef4f6; --panel:#fff; --text:#0f172a; --muted:#64748b; --border:#dbe3ea; --primary:#111827; --didi:#ff7a00; --shadow:0 18px 40px rgba(15,23,42,.10); }
+* { box-sizing:border-box; margin:0; padding:0; font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+body { min-height:100vh; background:linear-gradient(180deg,#fff7ed 0%,#f8fafc 100%); color:var(--text); padding:18px 12px 38px; }
+main { width:100%; max-width:860px; margin:0 auto; }
+header,.card,.notes { background:var(--panel); border:1px solid var(--border); border-radius:24px; box-shadow:var(--shadow); }
+header { padding:18px; margin-bottom:14px; }
+.logo { width:54px; height:54px; border-radius:18px; background:var(--didi); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:24px; font-weight:900; margin-bottom:12px; }
+h1 { font-size:30px; letter-spacing:-.8px; margin-bottom:8px; }
+p { color:var(--muted); font-size:14px; line-height:1.45; }
+.route,.status,.notes { margin-top:12px; border-radius:18px; padding:12px; font-size:14px; line-height:1.55; }
+.route { background:#f8fafc; border:1px solid var(--border); color:#334155; }
+.status { display:none; background:#111827; color:white; margin-bottom:14px; white-space:pre-wrap; word-break:break-word; }
+.status.active { display:block; }
+.notes { color:#9a3412; background:#fff7ed; border-color:#fed7aa; margin:14px 0; }
+.grid { display:grid; grid-template-columns:1fr; gap:12px; }
+.card { padding:16px; }
+.top { display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+.pill { background:rgba(255,122,0,.12); color:#c2410c; border:1px solid rgba(255,122,0,.18); border-radius:999px; padding:6px 10px; font-size:12px; font-weight:900; }
+.card strong { font-size:16px; }
+button { width:100%; border:none; background:var(--primary); color:white; padding:13px; border-radius:14px; font-size:15px; font-weight:900; margin-top:8px; cursor:pointer; }
+button.secondary { background:#f1f5f9; color:#111827; border:1px solid var(--border); }
+details { margin-top:10px; color:var(--muted); font-size:13px; }
+code { display:block; margin-top:8px; background:#f8fafc; border:1px solid var(--border); border-radius:14px; padding:10px; white-space:pre-wrap; word-break:break-all; color:#334155; }
+@media (min-width:760px) { .grid { grid-template-columns:repeat(2,1fr); } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="logo">D</div>
+  <h1>Remo - DiDi Test</h1>
+  <p>Prueba aislada de deep links de DiDi desde Android Chrome / Render HTTPS. No toca Remo principal.</p>
+  <div class="route"><strong>Ruta fija:</strong><br />Origen: Teatro Colón (-34.6010, -58.3831)<br />Destino: Alto Palermo (-34.5889, -58.4106)</div>
+</header>
+<div id="status" class="status"></div>
+<section class="notes">Probá una variante por vez. Resultado ideal: abre DiDi y carga origen + destino. Si ninguna carga ruta, DiDi queda como fallback asistido: copiar destino y abrir app.</section>
+<section id="grid" class="grid"></section>
+</main>
+<script>
+const variants = [{"id": "V1", "name": "didi:// passenger/order from/to", "url": "didi://passenger/order?from_lat=-34.6010&from_lng=-58.3831&to_lat=-34.5889&to_lng=-58.4106"}, {"id": "V2", "name": "didipas:// passenger/order from/to", "url": "didipas://passenger/order?from_lat=-34.6010&from_lng=-58.3831&to_lat=-34.5889&to_lng=-58.4106"}, {"id": "V3", "name": "didipasenger:// journey pickup/dropoff", "url": "didipasenger://journey?pickup_lat=-34.6010&pickup_lng=-58.3831&dropoff_lat=-34.5889&dropoff_lng=-58.4106"}, {"id": "V4", "name": "didi:// journey pickup/dropoff", "url": "didi://journey?pickup_lat=-34.6010&pickup_lng=-58.3831&dropoff_lat=-34.5889&dropoff_lng=-58.4106"}, {"id": "V5", "name": "didi:// ride from/to", "url": "didi://ride?from_lat=-34.6010&from_lng=-58.3831&to_lat=-34.5889&to_lng=-58.4106"}, {"id": "V6", "name": "didi:// order origin/destination", "url": "didi://order?origin_lat=-34.6010&origin_lng=-58.3831&destination_lat=-34.5889&destination_lng=-58.4106"}, {"id": "V7", "name": "didi:// estilo Uber", "url": "didi://passenger/order?pickup[latitude]=-34.6010&pickup[longitude]=-58.3831&dropoff[latitude]=-34.5889&dropoff[longitude]=-58.4106"}, {"id": "V8", "name": "intent didi package from/to", "url": "intent://passenger/order?from_lat=-34.6010&from_lng=-58.3831&to_lat=-34.5889&to_lng=-58.4106#Intent;scheme=didi;package=com.didiglobal.passenger;end;"}, {"id": "V9", "name": "intent didipas journey", "url": "intent://journey?pickup_lat=-34.6010&pickup_lng=-58.3831&dropoff_lat=-34.5889&dropoff_lng=-58.4106#Intent;scheme=didipas;package=com.didiglobal.passenger;end;"}, {"id": "V10", "name": "intent didipasenger ride", "url": "intent://ride?origin_lat=-34.6010&origin_lng=-58.3831&destination_lat=-34.5889&destination_lng=-58.4106#Intent;scheme=didipasenger;package=com.didiglobal.passenger;end;"}, {"id": "V11", "name": "web.didiglobal.com", "url": "https://web.didiglobal.com/journey?pickup_lat=-34.6010&pickup_lng=-58.3831&dropoff_lat=-34.5889&dropoff_lng=-58.4106"}, {"id": "V12", "name": "page.didiglobal.com", "url": "https://page.didiglobal.com/passenger/order?from_lat=-34.6010&from_lng=-58.3831&to_lat=-34.5889&to_lng=-58.4106"}, {"id": "V13", "name": "launcher DiDi", "url": "intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.didiglobal.passenger;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.didiglobal.passenger;end"}];
+const grid = document.getElementById("grid");
+const statusBox = document.getElementById("status");
+function esc(text) { return String(text).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
+function setStatus(message) { statusBox.textContent = message; statusBox.classList.add("active"); }
+async function copyText(text) { try { await navigator.clipboard.writeText(text); setStatus("URL copiada al portapapeles."); } catch (error) { setStatus("No se pudo copiar automáticamente. Abrí Ver URL y copiá manualmente."); } }
+function runTest(id, url) { setStatus(`Probando ${id}
+${url}
+
+Checklist:
+1. ¿Abre DiDi?
+2. ¿Carga origen?
+3. ¿Carga destino?
+4. ¿Muestra precios?`); window.location.href = url; }
+grid.innerHTML = variants.map(v => `
+  <article class="card">
+    <div class="top"><span class="pill">${esc(v.id)}</span><strong>${esc(v.name)}</strong></div>
+    <p>Test de apertura DiDi con ruta Teatro Colón → Alto Palermo.</p>
+    <button onclick="runTest('${esc(v.id)}', \`${v.url}\`)">Probar ${esc(v.id)}</button>
+    <button class="secondary" onclick="copyText(\`${v.url}\`)">Copiar URL</button>
+    <details><summary>Ver URL</summary><code>${esc(v.url)}</code></details>
+  </article>
+`).join("");
+</script>
+</body>
+</html>

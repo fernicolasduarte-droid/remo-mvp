@@ -727,17 +727,27 @@ Destino: ${destinationText}`;
         return;
       }
 
-      const routeText = getOriginAndDestinationTextForClipboard();
+      const destinationText = getDestinationTextForClipboard();
+
       await copyTextBestEffort(
-        routeText,
-        "Ruta copiada ✅ Si DiDi no carga, pegá destino manualmente.",
-        `No pudimos copiar. ${routeText}`
+        destinationText,
+        "Destino copiado ✅ Pegalo en DiDi.",
+        `No pudimos copiar. Destino: ${destinationText}`
       );
 
       setTimeout(function() {
-        const googleMapsDrivingUrl = buildGoogleMapsRouteUrl(currentOrigin, currentDestination, "driving");
-        const didiUrl = `didipas://passenger/order?from_lat=${encodeURIComponent(currentOrigin.lat)}&from_lng=${encodeURIComponent(currentOrigin.lng)}&to_lat=${encodeURIComponent(currentDestination.lat)}&to_lng=${encodeURIComponent(currentDestination.lng)}`;
-        openWithFallback(didiUrl, googleMapsDrivingUrl, 1600);
+        const playStoreUrl = "https://play.google.com/store/apps/details?id=com.didiglobal.passenger";
+
+        const didiIntent =
+          "intent://#Intent;" +
+          "action=android.intent.action.MAIN;" +
+          "category=android.intent.category.LAUNCHER;" +
+          "package=com.didiglobal.passenger;" +
+          "S.browser_fallback_url=" +
+          encodeURIComponent(playStoreUrl) +
+          ";end";
+
+        window.location.href = didiIntent;
       }, 850);
     }
 
@@ -814,6 +824,54 @@ Destino: ${destinationText}`;
       }
     }
 
+    function getCurrentPositionOnce(options) {
+      return new Promise(function(resolve, reject) {
+        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+      });
+    }
+
+    function sleep(ms) {
+      return new Promise(function(resolve) {
+        setTimeout(resolve, ms);
+      });
+    }
+
+    async function getBestCurrentPosition() {
+      const attempts = [];
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 0
+      };
+
+      // Pedimos hasta 3 lecturas y nos quedamos con la más precisa.
+      for (let i = 0; i < 3; i += 1) {
+        try {
+          setStatus(`Buscando ubicación precisa... intento ${i + 1}/3`);
+          const position = await getCurrentPositionOnce(options);
+          attempts.push(position);
+
+          const accuracy = Number(position.coords.accuracy || 9999);
+
+          if (accuracy <= 35) {
+            break;
+          }
+
+          await sleep(900);
+        } catch (error) {
+          if (attempts.length === 0) {
+            throw error;
+          }
+        }
+      }
+
+      attempts.sort(function(a, b) {
+        return Number(a.coords.accuracy || 9999) - Number(b.coords.accuracy || 9999);
+      });
+
+      return attempts[0];
+    }
+
     async function useCurrentLocationAsOrigin() {
       if (!navigator.geolocation) {
         alert("Tu navegador no permite obtener ubicación actual.");
@@ -822,51 +880,42 @@ Destino: ${destinationText}`;
 
       useLocationBtn.disabled = true;
       useLocationBtn.textContent = "Buscando ubicación...";
-      setStatus("Pidiendo permiso de ubicación al navegador...");
+      setStatus("Buscando tu ubicación con alta precisión...");
 
-      navigator.geolocation.getCurrentPosition(async function(position) {
-        try {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          const accuracy = Math.round(position.coords.accuracy || 0);
+      try {
+        const position = await getBestCurrentPosition();
 
-          let displayName = `Mi ubicación actual (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
-          let shortName = "Mi ubicación actual";
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const accuracy = Math.round(position.coords.accuracy || 0);
 
-          try {
-            const reverseData = await reverseGeocodeCurrentLocation(lat, lng);
-            if (reverseData && reverseData.display_name) {
-              displayName = reverseData.display_name;
-              shortName = getShortName(reverseData) || "Mi ubicación actual";
-            }
-          } catch (reverseError) {
-            console.warn("No se pudo hacer reverse geocoding:", reverseError);
-          }
+        const displayName = accuracy
+          ? `Mi ubicación actual · precisión aprox. ±${accuracy} m`
+          : `Mi ubicación actual (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
 
-          const currentPlace = {
-            lat,
-            lon: lng,
-            lng,
-            name: shortName,
-            displayName,
-            isCurrentLocation: true
-          };
+        const currentPlace = {
+          lat,
+          lon: lng,
+          lng,
+          name: "Mi ubicación actual",
+          displayName,
+          accuracy,
+          isCurrentLocation: true
+        };
 
-          selectedPlaces.origin = currentPlace;
-          saveCurrentPlace("origin", currentPlace);
-          originInput.value = displayName;
-          hideSuggestions(originSuggestions);
+        selectedPlaces.origin = currentPlace;
+        saveCurrentPlace("origin", currentPlace);
+        originInput.value = displayName;
+        hideSuggestions(originSuggestions);
 
+        if (accuracy && accuracy > 80) {
+          setStatus(`Ubicación actual cargada como origen. Precisión aproximada: ${accuracy} m. Si ves que está corrida, podés escribir el origen manualmente.`, true);
+          showToast(`Ubicación aproximada cargada · ±${accuracy} m`, 3600);
+        } else {
           setStatus(`Ubicación actual cargada como origen. Precisión aproximada: ${accuracy} m.`);
-          showToast("Ubicación actual cargada como origen ✅");
-        } catch (error) {
-          console.error(error);
-          setStatus("No pudimos convertir tu ubicación en una dirección. Probá escribiendo el origen manualmente.", true);
-        } finally {
-          useLocationBtn.disabled = false;
-          useLocationBtn.textContent = "📍 Usar mi ubicación actual";
+          showToast(`Ubicación actual cargada · ±${accuracy} m ✅`);
         }
-      }, function(error) {
+      } catch (error) {
         console.warn("Error geolocation:", error);
 
         let message = "No pudimos acceder a tu ubicación.";
@@ -885,13 +934,10 @@ Destino: ${destinationText}`;
 
         setStatus(message, true);
         alert(message);
+      } finally {
         useLocationBtn.disabled = false;
         useLocationBtn.textContent = "📍 Usar mi ubicación actual";
-      }, {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 30000
-      });
+      }
     }
 
 
