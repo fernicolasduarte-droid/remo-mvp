@@ -395,6 +395,66 @@ function buildSections(routeInfo, pricingContext, origin, destination) {
   ];
 }
 
+
+function buildPromotions(pricingContext) {
+  const airport = pricingContext.airport || {};
+  const isEzeizaRoute = airport.isAirportRoute && String(airport.airportName || "").toLowerCase().includes("ezeiza");
+
+  return [
+    {
+      app: "Cabify",
+      provider: "BBVA Mastercard Black",
+      title: "Cabify x BBVA Mastercard Black",
+      badge: isEzeizaRoute ? "Aplica a esta ruta" : "Ezeiza",
+      description: "100% de descuento hacia o desde Aeropuerto de Ezeiza con código MCBBVA2026. Tope y condiciones según BBVA.",
+      code: "MCBBVA2026",
+      priority: isEzeizaRoute ? 1 : 2,
+      route_match: isEzeizaRoute,
+      type: "bank"
+    },
+    {
+      app: "Cabify",
+      provider: "Mastercard",
+      title: "Cabify x Mastercard",
+      badge: "30%",
+      description: "Promo Mastercard/Cabify detectada. Requiere cargar código y pagar con Mastercard adherida. Ver condiciones vigentes en Cabify/Mastercard.",
+      code: null,
+      priority: 3,
+      route_match: false,
+      type: "bank"
+    },
+    {
+      app: "Uber",
+      provider: "Uber",
+      title: "Promos personales de Uber",
+      badge: "Variable",
+      description: "Uber puede aplicar cupones o descuentos personales dentro de la app. Remo no puede verlos sin cuenta sincronizada.",
+      code: null,
+      priority: 4,
+      route_match: false,
+      type: "app"
+    },
+    {
+      app: "DiDi",
+      provider: "DiDi",
+      title: "Cupones DiDi",
+      badge: "Variable",
+      description: "DiDi puede aplicar cupones, referidos o descuentos personales dentro de la app.",
+      code: null,
+      priority: 5,
+      route_match: false,
+      type: "app"
+    }
+  ].sort(function(a, b) {
+    if (a.route_match !== b.route_match) {
+      return a.route_match ? -1 : 1;
+    }
+
+    return a.priority - b.priority;
+  });
+}
+
+
 async function getRouteAndContext(req, res) {
   const { start_lat, start_lng, end_lat, end_lng } = req.query;
   if (!isValidCoordinate(start_lat) || !isValidCoordinate(start_lng) || !isValidCoordinate(end_lat) || !isValidCoordinate(end_lng)) {
@@ -434,6 +494,7 @@ app.get("/api/options", async (req, res) => {
         geometry: result.routeInfo.geometry || null
       },
       context: result.pricingContext,
+      promotions: buildPromotions(result.pricingContext),
       sections
     });
   } catch (error) {

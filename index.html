@@ -235,6 +235,139 @@
       background: #e2e8f0;
     }
 
+
+    .route-animation-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      background: #f8fafc;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .route-animation-info span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: right;
+    }
+
+    .route-emoji-marker {
+      font-size: 30px;
+      line-height: 30px;
+      text-align: center;
+      filter: drop-shadow(0 5px 8px rgba(15, 23, 42, 0.28));
+      transform: translate(-50%, -50%);
+    }
+
+    .promo-panel {
+      display: none;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      padding: 15px;
+      margin-bottom: 16px;
+    }
+
+    .promo-panel.active {
+      display: block;
+    }
+
+    .promo-header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .promo-header h2 {
+      font-size: 19px;
+      letter-spacing: -0.3px;
+    }
+
+    .promo-header p {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .promo-row {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 5px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .promo-card {
+      flex: 0 0 82%;
+      min-width: 260px;
+      max-width: 330px;
+      scroll-snap-align: start;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: #f8fafc;
+      padding: 13px;
+    }
+
+    .promo-card.match {
+      border-color: rgba(22, 163, 74, 0.42);
+      background: #f0fdf4;
+    }
+
+    .promo-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+
+    .promo-top strong {
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .promo-badge {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 6px 9px;
+      background: #111827;
+      color: white;
+      font-size: 11px;
+      font-weight: 950;
+    }
+
+    .promo-card.match .promo-badge {
+      background: #16a34a;
+    }
+
+    .promo-card p {
+      color: #475569;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .promo-code {
+      display: inline-flex;
+      margin-top: 9px;
+      border-radius: 999px;
+      border: 1px dashed #94a3b8;
+      padding: 6px 9px;
+      color: #0f172a;
+      background: white;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+
     .weather-strip {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -265,7 +398,140 @@
         height: 245px;
       }
 
-      .weather-strip {
+  
+    .route-animation-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      background: #f8fafc;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .route-animation-info span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: right;
+    }
+
+    .route-emoji-marker {
+      font-size: 30px;
+      line-height: 30px;
+      text-align: center;
+      filter: drop-shadow(0 5px 8px rgba(15, 23, 42, 0.28));
+      transform: translate(-50%, -50%);
+    }
+
+    .promo-panel {
+      display: none;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      padding: 15px;
+      margin-bottom: 16px;
+    }
+
+    .promo-panel.active {
+      display: block;
+    }
+
+    .promo-header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .promo-header h2 {
+      font-size: 19px;
+      letter-spacing: -0.3px;
+    }
+
+    .promo-header p {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .promo-row {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 5px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .promo-card {
+      flex: 0 0 82%;
+      min-width: 260px;
+      max-width: 330px;
+      scroll-snap-align: start;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: #f8fafc;
+      padding: 13px;
+    }
+
+    .promo-card.match {
+      border-color: rgba(22, 163, 74, 0.42);
+      background: #f0fdf4;
+    }
+
+    .promo-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+
+    .promo-top strong {
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .promo-badge {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 6px 9px;
+      background: #111827;
+      color: white;
+      font-size: 11px;
+      font-weight: 950;
+    }
+
+    .promo-card.match .promo-badge {
+      background: #16a34a;
+    }
+
+    .promo-card p {
+      color: #475569;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .promo-code {
+      display: inline-flex;
+      margin-top: 9px;
+      border-radius: 999px;
+      border: 1px dashed #94a3b8;
+      padding: 6px 9px;
+      color: #0f172a;
+      background: white;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+
+    .weather-strip {
         grid-template-columns: 1fr;
       }
     }
@@ -411,7 +677,7 @@
         </div>
         <button class="search-btn" id="searchBtn">Buscar</button>
       </div>
-      <p class="helper">MVP: rangos estimados por Remo. El precio final puede variar por descuentos personales.</p>
+      <p class="helper">MVP: rangos estimados con clima, hora y zona. El precio final puede variar por descuentos personales.</p>
       <div id="debugStatus" class="status"></div>
     </section>
 
@@ -423,7 +689,13 @@
         <span id="mapSubtitle">Origen → destino</span>
       </div>
       <div id="routeMap"></div>
+      <div class="route-animation-info" id="routeAnimationInfo">
+        🚣 Simulación Remo
+        <span>Origen → destino</span>
+      </div>
     </section>
+
+    <section class="promo-panel" id="promoPanel"></section>
 
     <nav class="mode-tabs" id="modeTabs"></nav>
 
@@ -473,9 +745,13 @@
     const modeTabs = document.getElementById("modeTabs");
     const mapPanel = document.getElementById("mapPanel");
     const mapSubtitle = document.getElementById("mapSubtitle");
+    const routeAnimationInfo = document.getElementById("routeAnimationInfo");
+    const promoPanel = document.getElementById("promoPanel");
     let routeMap = null;
     let routeLayer = null;
     let markerLayer = null;
+    let routeEmojiMarker = null;
+    let routeAnimationTimer = null;
     const toast = document.getElementById("toast");
     const originInput = document.getElementById("origin");
     const destinationInput = document.getElementById("destination");
@@ -775,6 +1051,165 @@
       return [];
     }
 
+
+    function clearRouteAnimation() {
+      if (routeAnimationTimer) {
+        clearInterval(routeAnimationTimer);
+        routeAnimationTimer = null;
+      }
+
+      if (routeEmojiMarker && routeMap) {
+        routeMap.removeLayer(routeEmojiMarker);
+      }
+
+      routeEmojiMarker = null;
+    }
+
+    function roughDistanceBetween(a, b) {
+      const lat1 = Number(a[0]);
+      const lng1 = Number(a[1]);
+      const lat2 = Number(b[0]);
+      const lng2 = Number(b[1]);
+      const dLat = lat2 - lat1;
+      const dLng = lng2 - lng1;
+
+      return Math.sqrt(dLat * dLat + dLng * dLng);
+    }
+
+    function getLatLngAtProgress(latlngs, progress) {
+      if (!latlngs.length) {
+        return null;
+      }
+
+      if (latlngs.length === 1) {
+        return latlngs[0];
+      }
+
+      const segmentLengths = [];
+      let totalLength = 0;
+
+      for (let i = 0; i < latlngs.length - 1; i++) {
+        const length = roughDistanceBetween(latlngs[i], latlngs[i + 1]);
+        segmentLengths.push(length);
+        totalLength += length;
+      }
+
+      if (totalLength <= 0) {
+        return latlngs[0];
+      }
+
+      const target = totalLength * Math.max(0, Math.min(1, progress));
+      let walked = 0;
+
+      for (let i = 0; i < segmentLengths.length; i++) {
+        const segmentLength = segmentLengths[i];
+
+        if (walked + segmentLength >= target) {
+          const localProgress = segmentLength === 0
+            ? 0
+            : (target - walked) / segmentLength;
+
+          const start = latlngs[i];
+          const end = latlngs[i + 1];
+
+          return [
+            Number(start[0]) + (Number(end[0]) - Number(start[0])) * localProgress,
+            Number(start[1]) + (Number(end[1]) - Number(start[1])) * localProgress
+          ];
+        }
+
+        walked += segmentLength;
+      }
+
+      return latlngs[latlngs.length - 1];
+    }
+
+    function startRouteAnimation(latlngs, route) {
+      clearRouteAnimation();
+
+      if (!window.L || !routeMap || !latlngs || latlngs.length < 2) {
+        return;
+      }
+
+      const durationMin = Number(route?.duration_min || 0);
+      const displayDuration = durationMin > 0 ? `${Math.round(durationMin)} min estimados` : "tiempo estimado";
+
+      if (routeAnimationInfo) {
+        routeAnimationInfo.innerHTML = `🚣 Remo en camino <span>${displayDuration} · simulación visual</span>`;
+      }
+
+      const boatIcon = L.divIcon({
+        className: "",
+        html: "<div class='route-emoji-marker'>🚣</div>",
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
+      });
+
+      routeEmojiMarker = L.marker(latlngs[0], {
+        icon: boatIcon,
+        interactive: false
+      }).addTo(routeMap);
+
+      const animationMs = 9500;
+      const startedAt = Date.now();
+
+      routeAnimationTimer = setInterval(function() {
+        const progress = ((Date.now() - startedAt) % animationMs) / animationMs;
+        const point = getLatLngAtProgress(latlngs, progress);
+
+        if (point && routeEmojiMarker) {
+          routeEmojiMarker.setLatLng(point);
+        }
+      }, 75);
+    }
+
+    function renderPromotions(promotions) {
+      if (!promoPanel) {
+        return;
+      }
+
+      const list = Array.isArray(promotions) ? promotions : [];
+
+      if (!list.length) {
+        promoPanel.classList.remove("active");
+        promoPanel.innerHTML = "";
+        return;
+      }
+
+      promoPanel.classList.add("active");
+
+      const cards = list.map(function(promo) {
+        const isMatch = Boolean(promo.route_match);
+        const code = promo.code
+          ? `<div class="promo-code">Código: ${escapeHTML(promo.code)}</div>`
+          : "";
+
+        return `
+          <article class="promo-card ${isMatch ? "match" : ""}">
+            <div class="promo-top">
+              <strong>${escapeHTML(promo.title || "Promoción")}</strong>
+              <span class="promo-badge">${escapeHTML(promo.badge || "Ver")}</span>
+            </div>
+            <p>${escapeHTML(promo.description || "")}</p>
+            ${code}
+          </article>
+        `;
+      }).join("");
+
+      promoPanel.innerHTML = `
+        <div class="promo-header">
+          <div>
+            <h2>💳 Descuentos y bancos</h2>
+            <p>Promos detectadas o posibles. No se aplican automáticamente en Remo.</p>
+          </div>
+        </div>
+        <div class="promo-row">
+          ${cards}
+        </div>
+      `;
+    }
+
+
     function renderRouteMap(data) {
       if (!mapPanel) {
         return;
@@ -826,6 +1261,8 @@
           routeMap.removeLayer(markerLayer);
         }
 
+        clearRouteAnimation();
+
         routeLayer = L.polyline(latlngs, {
           weight: 5,
           opacity: 0.88
@@ -847,6 +1284,8 @@
         routeMap.fitBounds(routeLayer.getBounds(), {
           padding: [28, 28]
         });
+
+        startRouteAnimation(latlngs, data.route || {});
 
         setTimeout(function() {
           routeMap.invalidateSize();
@@ -924,6 +1363,7 @@
       currentDestination = saveCurrentPlace("destination", { ...destinationCoords, name: destinationCoords.name || destinationCoords.displayName || destination });
       renderSummary(data, origin, destination);
       renderRouteMap(data);
+      renderPromotions(data.promotions || []);
       const sections = data.sections || [];
       if (!sections.length) {
         modeTabs.classList.remove("active");
@@ -970,7 +1410,7 @@
             <div class="cards-row">${cards}</div>
           </section>
         `;
-      }).join("") + `<div class="disclaimer">Los valores son rangos estimados por Remo. Confirmá precio final, disponibilidad, producto exacto y tiempos de espera en la app destino.</div>`;
+      }).join("") + `<div class="disclaimer">Los valores son rangos estimados por Remo. El precio final puede variar por descuentos personales, bancos, cupones, método de pago, demanda y disponibilidad.</div>`;
       resultsContainer.querySelectorAll(".travel-btn").forEach((button) => {
         button.addEventListener("click", function() { travel(button.dataset.action, button.dataset.app, button.dataset.product); });
       });
