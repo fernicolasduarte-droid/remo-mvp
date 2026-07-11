@@ -193,6 +193,63 @@
       border: 1px solid var(--border) !important;
     }
 
+
+    .insight-banner {
+      background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+      color: white;
+      border-radius: 26px;
+      padding: 17px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.20);
+      margin-bottom: 16px;
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .insight-kicker {
+      font-size: 12px;
+      font-weight: 900;
+      color: #93c5fd;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .insight-title {
+      font-size: 22px;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+      font-weight: 950;
+      margin-bottom: 7px;
+    }
+
+    .insight-text {
+      color: #d1d5db;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .origin-tools {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .small-action {
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: #111827;
+      border-radius: 999px;
+      padding: 8px 11px;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .small-action:hover {
+      background: #eef2f7;
+    }
+
+
     .toast {
       position: fixed;
       left: 16px;
@@ -264,6 +321,9 @@
           <ul id="originSuggestions" class="suggestions"></ul>
           <button class="location-btn" type="button" id="useLocationBtn">📍 Usar mi ubicación actual</button>
           <div class="location-note">Recomendado para Cabify: Remo usa tu ubicación como origen y copia solo el destino.</div>
+          <div class="origin-tools">
+            <button class="small-action" type="button" id="adjustOriginBtn">Ajustar origen manualmente</button>
+          </div>
         </div>
         <div class="field">
           <label for="destination">Destino</label>
@@ -272,7 +332,7 @@
         </div>
         <button class="search-btn" id="searchBtn">Buscar</button>
       </div>
-      <p class="helper">MVP: rangos estimados por Remo. Confirmá precio final y disponibilidad en la app destino.</p>
+      <p class="helper">MVP: rangos estimados por Remo. El precio final puede variar por descuentos personales.</p>
       <div id="debugStatus" class="status"></div>
     </section>
 
@@ -329,6 +389,7 @@
     const originSuggestions = document.getElementById("originSuggestions");
     const destinationSuggestions = document.getElementById("destinationSuggestions");
     const useLocationBtn = document.getElementById("useLocationBtn");
+    const adjustOriginBtn = document.getElementById("adjustOriginBtn");
     const locationPermissionModal = document.getElementById("locationPermissionModal");
     const confirmLocationPermissionBtn = document.getElementById("confirmLocationPermissionBtn");
     const cancelLocationPermissionBtn = document.getElementById("cancelLocationPermissionBtn");
@@ -563,6 +624,51 @@
       `;
     }
 
+
+    function getComparableItems(sections) {
+      return sections
+        .filter(function(section) {
+          return section.id !== "public_transport";
+        })
+        .flatMap(function(section) {
+          return section.items || [];
+        })
+        .filter(function(item) {
+          return Number.isFinite(Number(item.price_min));
+        });
+    }
+
+    function buildInsightBanner(sections) {
+      const items = getComparableItems(sections);
+
+      if (!items.length) {
+        return "";
+      }
+
+      const sorted = [...items].sort(function(a, b) {
+        return a.price_min - b.price_min;
+      });
+
+      const cheapest = sorted[0];
+      const mostExpensive = sorted[sorted.length - 1];
+      const saving = Math.max(0, mostExpensive.price_min - cheapest.price_min);
+
+      const title = saving > 500
+        ? `Ahorrás hasta ${formatARS(saving)}`
+        : "Mejor opción encontrada";
+
+      const text = `${cheapest.icon || ""} ${cheapest.product || cheapest.app} es la opción más barata estimada ahora, desde ${formatARS(cheapest.price_min)}. El precio final puede variar por descuentos personales de cada app.`;
+
+      return `
+        <div class="insight-banner">
+          <div class="insight-kicker">Resultado Remo</div>
+          <div class="insight-title">${escapeHTML(title)}</div>
+          <div class="insight-text">${escapeHTML(text)}</div>
+        </div>
+      `;
+    }
+
+
     function renderResults(data, origin, destination, originCoords, destinationCoords) {
       currentOrigin = saveCurrentPlace("origin", { ...originCoords, name: originCoords.name || originCoords.displayName || origin });
       currentDestination = saveCurrentPlace("destination", { ...destinationCoords, name: destinationCoords.name || destinationCoords.displayName || destination });
@@ -575,7 +681,8 @@
       }
       renderModeTabs(sections);
       resultsContainer.className = "sections";
-      resultsContainer.innerHTML = sections.map((section) => {
+      const insightBanner = buildInsightBanner(sections);
+      resultsContainer.innerHTML = insightBanner + sections.map((section) => {
         const cards = (section.items || []).map((item, index) => {
           const meta = getPlatformMeta(item.app);
           const integration = item.integration ? `<span class="chip">${escapeHTML(item.integration)}</span>` : "";
@@ -891,7 +998,7 @@ Destino: ${destinationText}`;
 
         const displayName = accuracy
           ? `Mi ubicación actual · precisión aprox. ±${accuracy} m`
-          : `Mi ubicación actual (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+          : `Mi ubicación actual`;
 
         const currentPlace = {
           lat,
@@ -909,7 +1016,7 @@ Destino: ${destinationText}`;
         hideSuggestions(originSuggestions);
 
         if (accuracy && accuracy > 80) {
-          setStatus(`Ubicación actual cargada como origen. Precisión aproximada: ${accuracy} m. Si ves que está corrida, podés escribir el origen manualmente.`, true);
+          setStatus(`Ubicación actual cargada como origen. Precisión aproximada: ${accuracy} m. Si hace falta, podés ajustar el origen manualmente.`, accuracy > 80);
           showToast(`Ubicación aproximada cargada · ±${accuracy} m`, 3600);
         } else {
           setStatus(`Ubicación actual cargada como origen. Precisión aproximada: ${accuracy} m.`);
@@ -974,6 +1081,18 @@ Destino: ${destinationText}`;
 
     setupAutocomplete(originInput, originSuggestions, "origin");
     setupAutocomplete(destinationInput, destinationSuggestions, "destination");
+
+    if (adjustOriginBtn) {
+      adjustOriginBtn.addEventListener("click", function() {
+        selectedPlaces.origin = null;
+        currentOrigin = null;
+        originInput.value = "";
+        originInput.placeholder = "Escribí tu origen o usá ubicación actual";
+        originInput.focus();
+        showToast("Origen listo para ajustar manualmente.");
+      });
+    }
+
     if (useLocationBtn) {
       useLocationBtn.addEventListener("click", openLocationPermissionModal);
     }

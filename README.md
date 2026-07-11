@@ -1,17 +1,15 @@
-# Remo MVP - actualización DiDi + ubicación precisa
+# Remo MVP - pulido UX
 
-Archivos para subir a GitHub/Render:
-- package.json
-- server.js
-- index.html
-- didi-test.html
-- README.md
+Actualización lista para GitHub/Render.
+
+Cambios:
+- Banner de ahorro / mejor opción encontrada.
+- Ubicación actual más honesta: muestra precisión, no calle/altura dudosa.
+- Botón para ajustar origen manualmente.
+- Cabify y DiDi quedan como ingreso manual requerido.
+- Uber queda como ruta automatizada validada.
+- El precio final puede variar por descuentos personales de cada app.
 
 Render:
 - Build Command: npm install
 - Start Command: npm start
-
-Cambios:
-- DiDi: fallback asistido, copia solo destino y abre app por intent launcher.
-- Ubicación: toma hasta 3 lecturas y usa la más precisa. Muestra precisión aproximada en metros.
-- didi-test.html: página aislada para probar variantes de DiDi.

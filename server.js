@@ -242,17 +242,17 @@ const PRODUCT_CONFIG = {
   auto: [
     { app: "Uber", product: "UberX", icon: "🚗", action: "uber_v2", integration: "Ruta validada en Android", base: 1450, perKm: 520, perMin: 95, min: 3200, rangeNormal: 900, rangeMedium: 1100, rangeHigh: 1300, appMultiplier: 1.0 },
     { app: "Uber", product: "Comfort", icon: "🚘", action: "uber_v2", integration: "Ruta validada en Android", base: 2100, perKm: 600, perMin: 115, min: 4200, rangeNormal: 1000, rangeMedium: 1200, rangeHigh: 1400, appMultiplier: 1.0 },
-    { app: "Cabify", product: "Cabify", icon: "🚙", action: "cabify_app", integration: "Abre app; ruta no validada", base: 1700, perKm: 540, perMin: 100, min: 3500, rangeNormal: 1000, rangeMedium: 1300, rangeHigh: 1500, appMultiplier: 1.0 },
-    { app: "DiDi", product: "DiDi Auto", icon: "🚗", action: "didi_or_maps", integration: "Fallback a Maps si falla", base: 1300, perKm: 480, perMin: 88, min: 3000, rangeNormal: 1000, rangeMedium: 1300, rangeHigh: 1500, appMultiplier: 0.98 }
+    { app: "Cabify", product: "Cabify", icon: "🚙", action: "cabify_app", integration: "Ingreso manual requerido", base: 1700, perKm: 540, perMin: 100, min: 3500, rangeNormal: 1000, rangeMedium: 1300, rangeHigh: 1500, appMultiplier: 1.0 },
+    { app: "DiDi", product: "DiDi Auto", icon: "🚗", action: "didi_or_maps", integration: "Ingreso manual requerido", base: 1300, perKm: 480, perMin: 88, min: 3000, rangeNormal: 1000, rangeMedium: 1300, rangeHigh: 1500, appMultiplier: 0.98 }
   ],
   moto: [
     { app: "Uber", product: "Moto", icon: "🏍️", action: "uber_v2", integration: "Ruta validada via Uber", base: 900, perKm: 430, perMin: 70, min: 2400, rangeNormal: 700, rangeMedium: 900, rangeHigh: 1100, appMultiplier: 1.0 },
-    { app: "DiDi", product: "DiDi Moto", icon: "🏍️", action: "didi_or_maps", integration: "No validado; fallback a Maps", base: 850, perKm: 390, perMin: 62, min: 2200, rangeNormal: 800, rangeMedium: 1000, rangeHigh: 1200, appMultiplier: 0.98 }
+    { app: "DiDi", product: "DiDi Moto", icon: "🏍️", action: "didi_or_maps", integration: "Ingreso manual requerido", base: 850, perKm: 390, perMin: 62, min: 2200, rangeNormal: 800, rangeMedium: 1000, rangeHigh: 1200, appMultiplier: 0.98 }
   ],
   envios: [
-    { app: "Uber", product: "Flash", icon: "📦", action: "uber_v2", integration: "Abre Uber; producto no preseleccionado", base: 1150, perKm: 430, perMin: 68, min: 2600, rangeNormal: 750, rangeMedium: 900, rangeHigh: 1100, appMultiplier: 1.0 },
-    { app: "Cabify", product: "Envios", icon: "⚡", action: "cabify_app", integration: "Abre app; producto no validado", base: 1350, perKm: 460, perMin: 72, min: 2800, rangeNormal: 850, rangeMedium: 1000, rangeHigh: 1200, appMultiplier: 1.0 },
-    { app: "DiDi", product: "Entrega", icon: "📦", action: "didi_or_maps", integration: "Fallback a Maps si falla", base: 1100, perKm: 410, perMin: 65, min: 2500, rangeNormal: 850, rangeMedium: 1000, rangeHigh: 1200, appMultiplier: 0.98 }
+    { app: "Uber", product: "Flash", icon: "📦", action: "uber_v2", integration: "Abre Uber; confirmar producto", base: 1150, perKm: 430, perMin: 68, min: 2600, rangeNormal: 750, rangeMedium: 900, rangeHigh: 1100, appMultiplier: 1.0 },
+    { app: "Cabify", product: "Envios", icon: "⚡", action: "cabify_app", integration: "Ingreso manual requerido", base: 1350, perKm: 460, perMin: 72, min: 2800, rangeNormal: 850, rangeMedium: 1000, rangeHigh: 1200, appMultiplier: 1.0 },
+    { app: "DiDi", product: "Entrega", icon: "📦", action: "didi_or_maps", integration: "Ingreso manual requerido", base: 1100, perKm: 410, perMin: 65, min: 2500, rangeNormal: 850, rangeMedium: 1000, rangeHigh: 1200, appMultiplier: 0.98 }
   ]
 };
 
@@ -293,8 +293,12 @@ function createOption(productConfig, routeInfo, pricingContext) {
     currency: "ARS",
     distance_km: Number(routeInfo.distanceKm.toFixed(2)),
     duration_min: Number(routeInfo.durationMin.toFixed(0)),
-    confidence: pricingContext.demandLevel === "normal" ? "media" : "media-baja",
-    description: `Rango estimado por Remo para ${productConfig.product}. Confirma precio final en la app.`
+    confidence: productConfig.app === "Uber"
+      ? (pricingContext.demandLevel === "normal" ? "media-alta" : "media")
+      : "media-baja",
+    description: productConfig.app === "Uber"
+      ? `Rango estimado por Remo para ${productConfig.product}. Ruta automatica disponible.`
+      : `Rango estimado por Remo para ${productConfig.product}. Requiere pegar destino manualmente.`
   };
 }
 
