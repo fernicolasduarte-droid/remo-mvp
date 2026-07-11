@@ -169,8 +169,8 @@ function estimateDurationFallback(distanceKm, timeContext) {
 async function getDrivingRouteInfo(originLat, originLng, destinationLat, destinationLng, timeContext) {
   const coordinates = `${originLng},${originLat};${destinationLng},${destinationLat}`;
   const osrmServers = [
-    { name: "OSRM demo router.project-osrm.org", url: `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=false&alternatives=false&steps=false` },
-    { name: "OSRM FOSSGIS routing.openstreetmap.de", url: `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordinates}?overview=false&alternatives=false&steps=false` }
+    { name: "OSRM demo router.project-osrm.org", url: `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&alternatives=false&steps=false` },
+    { name: "OSRM FOSSGIS routing.openstreetmap.de", url: `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coordinates}?overview=full&geometries=geojson&alternatives=false&steps=false` }
   ];
 
   for (const server of osrmServers) {
@@ -184,7 +184,13 @@ async function getDrivingRouteInfo(originLat, originLng, destinationLat, destina
       const durationMin = Number.isFinite(route.duration)
         ? Math.max(4, route.duration / 60)
         : estimateDurationFallback(distanceKm, timeContext);
-      return { distanceKm, durationMin, source: server.name, fallback: false };
+      return {
+        distanceKm,
+        durationMin,
+        source: server.name,
+        fallback: false,
+        geometry: route.geometry || null
+      };
     } catch (error) {
       console.warn(`Fallo ${server.name}:`, error.message);
     }
@@ -196,7 +202,14 @@ async function getDrivingRouteInfo(originLat, originLng, destinationLat, destina
     distanceKm,
     durationMin: estimateDurationFallback(distanceKm, timeContext),
     source: "Fallback local Haversine x 1.35",
-    fallback: true
+    fallback: true,
+    geometry: {
+      type: "LineString",
+      coordinates: [
+        [originLng, originLat],
+        [destinationLng, destinationLat]
+      ]
+    }
   };
 }
 
@@ -417,7 +430,8 @@ app.get("/api/options", async (req, res) => {
         distance_km: Number(result.routeInfo.distanceKm.toFixed(2)),
         duration_min: Number(result.routeInfo.durationMin.toFixed(0)),
         source: result.routeInfo.source,
-        fallback: result.routeInfo.fallback
+        fallback: result.routeInfo.fallback,
+        geometry: result.routeInfo.geometry || null
       },
       context: result.pricingContext,
       sections

@@ -194,6 +194,83 @@
     }
 
 
+
+    .map-panel {
+      display: none;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .map-panel.active {
+      display: block;
+    }
+
+    .map-header {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .map-header strong {
+      font-size: 16px;
+    }
+
+    .map-header span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: right;
+    }
+
+    #routeMap {
+      width: 100%;
+      height: 280px;
+      background: #e2e8f0;
+    }
+
+    .weather-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 11px;
+    }
+
+    .weather-pill {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 10px;
+      color: #334155;
+      font-size: 12px;
+      line-height: 1.25;
+      font-weight: 800;
+    }
+
+    .weather-pill strong {
+      display: block;
+      color: #0f172a;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+
+    @media (max-width: 520px) {
+      #routeMap {
+        height: 245px;
+      }
+
+      .weather-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
     .insight-banner {
       background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
       color: white;
@@ -303,6 +380,8 @@
       .dev-actions { grid-template-columns: 1fr; }
     }
   </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 
 <body>
@@ -337,6 +416,15 @@
     </section>
 
     <section class="summary" id="summary"></section>
+
+    <section class="map-panel" id="mapPanel">
+      <div class="map-header">
+        <strong>Mapa de la ruta</strong>
+        <span id="mapSubtitle">Origen → destino</span>
+      </div>
+      <div id="routeMap"></div>
+    </section>
+
     <nav class="mode-tabs" id="modeTabs"></nav>
 
     <section id="results">
@@ -383,6 +471,11 @@
     const summary = document.getElementById("summary");
     const debugStatus = document.getElementById("debugStatus");
     const modeTabs = document.getElementById("modeTabs");
+    const mapPanel = document.getElementById("mapPanel");
+    const mapSubtitle = document.getElementById("mapSubtitle");
+    let routeMap = null;
+    let routeLayer = null;
+    let markerLayer = null;
     const toast = document.getElementById("toast");
     const originInput = document.getElementById("origin");
     const destinationInput = document.getElementById("destination");
@@ -606,6 +699,162 @@
       modeTabs.classList.add("active");
     }
 
+
+    function describeWeather(weather) {
+      if (!weather || !weather.available) {
+        return {
+          title: "Clima no disponible",
+          detail: "Sin dato en este momento",
+          icon: "🌡️"
+        };
+      }
+
+      if (weather.isStorm) {
+        return { title: "Tormenta", detail: "Puede subir la demanda", icon: "⛈️" };
+      }
+
+      if (weather.isRaining) {
+        return { title: "Lluvia", detail: "Puede subir la demanda", icon: "🌧️" };
+      }
+
+      if (Number(weather.windSpeed) >= 35) {
+        return { title: "Viento fuerte", detail: "Puede afectar tiempos", icon: "💨" };
+      }
+
+      return {
+        title: `${Math.round(Number(weather.temperature || 0))}°C`,
+        detail: "Clima normal",
+        icon: "☀️"
+      };
+    }
+
+    function renderWeatherStrip(context) {
+      const weather = context.weather || {};
+      const description = describeWeather(weather);
+      const demand = context.demandLevel || "normal";
+      const factors = context.factors || [];
+
+      return `
+        <div class="weather-strip">
+          <div class="weather-pill">
+            <strong>${escapeHTML(description.icon)} ${escapeHTML(description.title)}</strong>
+            ${escapeHTML(description.detail)}
+          </div>
+          <div class="weather-pill">
+            <strong>Demanda ${escapeHTML(demand)}</strong>
+            ${factors.length ? escapeHTML(factors.join(", ")) : "Sin factores extra"}
+          </div>
+          <div class="weather-pill">
+            <strong>${escapeHTML(context.multiplier || 1)}x contexto</strong>
+            hora, clima y zona
+          </div>
+        </div>
+      `;
+    }
+
+    function getRouteLatLngs(data) {
+      const geometry = data.route && data.route.geometry;
+
+      if (geometry && geometry.type === "LineString" && Array.isArray(geometry.coordinates)) {
+        return geometry.coordinates
+          .filter(function(coord) {
+            return Array.isArray(coord) && coord.length >= 2;
+          })
+          .map(function(coord) {
+            return [Number(coord[1]), Number(coord[0])];
+          });
+      }
+
+      if (currentOrigin && currentDestination) {
+        return [
+          [Number(currentOrigin.lat), Number(currentOrigin.lng)],
+          [Number(currentDestination.lat), Number(currentDestination.lng)]
+        ];
+      }
+
+      return [];
+    }
+
+    function renderRouteMap(data) {
+      if (!mapPanel) {
+        return;
+      }
+
+      const latlngs = getRouteLatLngs(data);
+
+      if (!latlngs.length) {
+        mapPanel.classList.remove("active");
+        return;
+      }
+
+      mapPanel.classList.add("active");
+
+      if (mapSubtitle && data.route) {
+        mapSubtitle.textContent = `${data.route.distance_km || "?"} km · ${data.route.duration_min || "?"} min`;
+      }
+
+      setTimeout(function() {
+        if (!window.L) {
+          const mapDiv = document.getElementById("routeMap");
+          if (mapDiv) {
+            mapDiv.innerHTML = "<div style='padding:18px;color:#475569;font-weight:800;'>No se pudo cargar el mapa. Revisá la conexión.</div>";
+          }
+          return;
+        }
+
+        if (!routeMap) {
+          routeMap = L.map("routeMap", {
+            zoomControl: false,
+            attributionControl: true
+          });
+
+          L.control.zoom({
+            position: "bottomright"
+          }).addTo(routeMap);
+
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap"
+          }).addTo(routeMap);
+        }
+
+        if (routeLayer) {
+          routeMap.removeLayer(routeLayer);
+        }
+
+        if (markerLayer) {
+          routeMap.removeLayer(markerLayer);
+        }
+
+        routeLayer = L.polyline(latlngs, {
+          weight: 5,
+          opacity: 0.88
+        }).addTo(routeMap);
+
+        markerLayer = L.layerGroup([
+          L.circleMarker(latlngs[0], {
+            radius: 7,
+            weight: 3,
+            fillOpacity: 1
+          }).bindPopup("Origen"),
+          L.circleMarker(latlngs[latlngs.length - 1], {
+            radius: 7,
+            weight: 3,
+            fillOpacity: 1
+          }).bindPopup("Destino")
+        ]).addTo(routeMap);
+
+        routeMap.fitBounds(routeLayer.getBounds(), {
+          padding: [28, 28]
+        });
+
+        setTimeout(function() {
+          routeMap.invalidateSize();
+        }, 250);
+      }, 150);
+    }
+
+
     function renderSummary(data, origin, destination) {
       const route = data.route || {};
       const context = data.context || {};
@@ -621,6 +870,7 @@
           <span class="chip">Multiplicador: ${escapeHTML(context.multiplier || 1)}x</span>
           ${factors.length ? factors.map((factor) => `<span class="chip">${escapeHTML(factor)}</span>`).join("") : `<span class="chip">sin factores extra</span>`}
         </div>
+        ${renderWeatherStrip(context)}
       `;
     }
 
@@ -673,6 +923,7 @@
       currentOrigin = saveCurrentPlace("origin", { ...originCoords, name: originCoords.name || originCoords.displayName || origin });
       currentDestination = saveCurrentPlace("destination", { ...destinationCoords, name: destinationCoords.name || destinationCoords.displayName || destination });
       renderSummary(data, origin, destination);
+      renderRouteMap(data);
       const sections = data.sections || [];
       if (!sections.length) {
         modeTabs.classList.remove("active");
